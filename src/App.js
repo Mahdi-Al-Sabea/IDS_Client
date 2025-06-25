@@ -7,6 +7,12 @@ import Dashboard from "./components/pages/Dashboard";
 import axios from "axios";
 import { Navigate } from "react-router-dom";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Profile from "./components/pages/Employee/Profile";
+import Rooms from "./components/pages/Admin/Rooms";
+import Users from "./components/pages/Admin/Users";
+import Features from "./components/pages/Admin/Features";
+
+
 
 axios.interceptors.request.use((config) => {
   const token = JSON.parse(localStorage.getItem("token"));
@@ -53,6 +59,10 @@ function App() {
           </PrivateRoute>
         }>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/rooms" element={<Rooms />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/features" element={<Features />} />
           {/* Add more protected routes here */}
 
 

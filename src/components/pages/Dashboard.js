@@ -24,7 +24,7 @@ export default function Dashboard() {
 
         getAllMeetings();
 
-    }, [navigate]);
+    }, []);
 
 
     useEffect(() => {

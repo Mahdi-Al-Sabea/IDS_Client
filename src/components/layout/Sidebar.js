@@ -44,16 +44,48 @@ export default function Sidebar() {
       <nav className="flex-grow-1 p-3">
         <ul className="nav flex-column gap-1">
           {user.role === "Admin" && (
-            <li className="nav-item">
-              <Link
-                to="/projects"
-                className={`nav-link ${
-                  isActive("/projects") ? "bg-light text-dark" : "text-white"
-                } rounded px-3 py-2`}
-              >
-                Projects
-              </Link>
-            </li>
+            <>
+              <li className="nav-item">
+                <Link
+                  to="/dashboard"
+                  className={`nav-link ${
+                    isActive("/dashboard") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Dashboard
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/features"
+                  className={`nav-link ${
+                    isActive("/features") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Features
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/rooms"
+                  className={`nav-link ${
+                    isActive("/rooms") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Rooms
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/users"
+                  className={`nav-link ${
+                    isActive("/users") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Users
+                </Link>
+              </li>
+            </>
           )}
 
           {(user.role === "Employee" || user.role === "Guest") && (
@@ -70,37 +102,16 @@ export default function Sidebar() {
               </li>
               <li className="nav-item">
                 <Link
-                  to="/boards"
+                  to="/profile"
                   className={`nav-link ${
-                    isActive("/boards") ? "bg-light text-dark" : "text-white"
+                    isActive("/profile") ? "bg-light text-dark" : "text-white"
                   } rounded px-3 py-2`}
                 >
-                  Boards
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link
-                  to="/tasks"
-                  className={`nav-link ${
-                    isActive("/tasks") ? "bg-light text-dark" : "text-white"
-                  } rounded px-3 py-2`}
-                >
-                  Tasks
+                  Profile
                 </Link>
               </li>
             </>
           )}
-
-          <li className="nav-item">
-            <Link
-              to="/profile"
-              className={`nav-link ${
-                isActive("/profile") ? "bg-light text-dark" : "text-white"
-              } rounded px-3 py-2`}
-            >
-              Profile
-            </Link>
-          </li>
         </ul>
       </nav>
 

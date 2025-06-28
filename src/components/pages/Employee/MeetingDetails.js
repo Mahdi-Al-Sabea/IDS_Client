@@ -39,23 +39,21 @@ export default function MeetingDetails() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [meetingRes, usersRes] = await Promise.all([
+        const meetingRes = await Promise.all([
           axios.get(`http://127.0.0.1:8000/api/Meeting/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get("http://127.0.0.1:8000/api/User", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
 
         const fetchedMeeting = meetingRes.data.data;
+
         setMeeting(fetchedMeeting);
         setAgendas(fetchedMeeting.agendas || []);
         setMinutesData({
           decisions: fetchedMeeting.minutes?.decisions || "",
           discussedPoints: fetchedMeeting.minutes?.discussedPoints || "",
         });
-        setUsers(usersRes.data.data || []);
+        setUsers(meetingRes.data.data.attendees || []);
       } catch {
         setError("Failed to fetch meeting details.");
       } finally {

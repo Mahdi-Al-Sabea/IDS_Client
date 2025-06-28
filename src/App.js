@@ -65,7 +65,7 @@ function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/features" element={<Features />} />
           <Route path="/meetings" element={<Meetings />} />
-          <Route path="/meetings/:id" element={<MeetingDetails />} />
+          <Route path="/meeting/:id" element={<MeetingDetails />} />
           {/* Add more protected routes here */}
 
 

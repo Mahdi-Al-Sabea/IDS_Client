@@ -11,7 +11,8 @@ import Profile from "./components/pages/Employee/Profile";
 import Rooms from "./components/pages/Admin/Rooms";
 import Users from "./components/pages/Admin/Users";
 import Features from "./components/pages/Admin/Features";
-
+import Meetings from "./components/pages/Employee/Meetings";
+import MeetingDetails from "./components/pages/Employee/MeetingDetails";
 
 
 axios.interceptors.request.use((config) => {
@@ -63,6 +64,8 @@ function App() {
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/users" element={<Users />} />
           <Route path="/features" element={<Features />} />
+          <Route path="/meetings" element={<Meetings />} />
+          <Route path="/meeting/:id" element={<MeetingDetails />} />
           {/* Add more protected routes here */}
 
 

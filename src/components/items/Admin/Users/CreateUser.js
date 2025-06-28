@@ -3,6 +3,8 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import { useState } from "react";
+import { useEffect } from "react";
+import { ToastContainer, toast } from 'react-toastify';
 
 const CreateUser = ({ onSubmit }) => {
 
@@ -16,15 +18,16 @@ const CreateUser = ({ onSubmit }) => {
         values
       );
       console.log("User created successfully:", response.data);
-      alert("User created successfully");
-        resetForm(); // Reset the form after successful submission
+      //alert("User created successfully");
+      toast.success("User created successfully");
+      resetForm(); // Reset the form after successful submission
     } catch (error) {
       if (error.response?.data?.message === "Validation Error") {
         console.error("Validation errors:");
         const errors = error.response.data.data;
         setErrors(errors); // setFormikErrors expects an object with field names as keys
         const messages = Object.values(errors).flat(); // flatten all error arrays
-        alert(messages.join("\n"));
+        toast.error(messages.join("\n"));
       }
       //console.error("Error creating user:", error);
     }
@@ -53,6 +56,8 @@ const CreateUser = ({ onSubmit }) => {
   });
 
   return (
+    <>
+    <ToastContainer />
     <div className="container mt-4">
       <div className="card shadow-lg mb-4">
         <div className="card-header text-center">
@@ -142,6 +147,7 @@ const CreateUser = ({ onSubmit }) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

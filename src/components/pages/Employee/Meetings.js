@@ -64,7 +64,9 @@ export default function MeetingsList() {
     setError(null);
     try {
       setLoading(true);
-      const res = await axios.get("http://127.0.0.1:8000/api/User/meetings", config);
+      const profileRes = await axios.get("http://127.0.0.1:8000/api/User/Profile");
+      const id = profileRes.data.data.id;
+      const res = await axios.get(`http://127.0.0.1:8000/api/User/${id}/meetings`, config);
       setMeetings(res.data.data);
     } catch (err) {
       setError("Failed to fetch meetings.");

@@ -16,7 +16,13 @@ export default function SignIn() {
     if (token && user && tokenExp) {
       const expirationDate = new Date(tokenExp);
       if (expirationDate > new Date()) {
-        navigate('/dashboard'); // Redirect to dashboard if already logged in
+        if (user) {
+          if(user.role=="Employee"){
+            navigate('/dashboardEmployee');
+          }else if(user.role==="Admin"){
+            navigate('/dashboardAdmin');
+          }
+      }
       }
     }
   });
@@ -49,13 +55,12 @@ export default function SignIn() {
     console.log('Token:', token); // Log token to console
     console.log('Response:', response); // Log full response data to console
 
-/*       if (user.role === 'Admin') {
-        navigate('/projects');
-      } else if (user.role === 'Employee') {
-        navigate('/dashboard');
-      } */
-        navigate('/dashboard'); // Redirect to dashboard after successful login
-
+      if(user.role === 'Employee') {
+        navigate('/dashboardEmployee');
+      }else if(user.role === 'Admin') {
+        navigate('/dashboardAdmin');
+      }
+      
     } catch (error) {
       setErrors({ password: 'Invalid credentials' });
     } finally {

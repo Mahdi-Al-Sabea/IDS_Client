@@ -14,6 +14,8 @@ import Features from "./components/pages/Admin/Features";
 import Meetings from "./components/pages/Employee/Meetings";
 import MeetingDetails from "./components/pages/Employee/MeetingDetails";
 import MeetingsCalendar from "./components/pages/Employee/MeetingsCalendar";
+import EmployeeDashboard from "./components/pages/Employee/dashboardEmployee";
+import ActionItemsPage from "./components/pages/Employee/ActionItems";
 
 
 axios.interceptors.request.use((config) => {
@@ -67,7 +69,9 @@ function App() {
           <Route path="/features" element={<Features />} />
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/meeting/:id" element={<MeetingDetails />} />
+          <Route path="/dashboardEmployee" element={<EmployeeDashboard />} />
           <Route path="/meetingCalendar" element={<MeetingsCalendar />} />
+          <Route path="/ActionItems" element={<ActionItemsPage />} />
           {/* Add more protected routes here */}
 
 

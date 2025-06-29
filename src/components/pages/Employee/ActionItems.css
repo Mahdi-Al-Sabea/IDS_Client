@@ -1,0 +1,87 @@
+.action-items-container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 2rem;
+  font-family: "Segoe UI", sans-serif;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.empty-message {
+  color: #777;
+  font-size: 1rem;
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.task-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.task-card {
+  border: 1.5px solid #ddd;
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: auto;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: transform 0.2s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-4px);
+}
+
+.task-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  color: #222;
+}
+
+.task-card p {
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.task-card.completed h3 {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.toggle-btn {
+  align-self: flex-start;
+  margin-top: 1rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  background-color: transparent;
+  border: 1.5px solid #007bff;
+  color: #007bff;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.task-card.completed .toggle-btn {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.toggle-btn:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.task-card.completed .toggle-btn:hover {
+  background-color: #dc3545;
+  color: white;
+}

@@ -118,12 +118,32 @@ export default function Sidebar() {
             <>
               <li className="nav-item">
                 <Link
-                  to="/dashboard"
+                  to="/dashboardEmployee"
                   className={`nav-link ${
-                    isActive("/dashboard") ? "bg-light text-dark" : "text-white"
+                    isActive("/dashboardEmployee") ? "bg-light text-dark" : "text-white"
                   } rounded px-3 py-2`}
                 >
                   Dashboard
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/meetings"
+                  className={`nav-link ${
+                    isActive("/meetings") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Meetings
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/meetingCalendar"
+                  className={`nav-link ${
+                    isActive("/meetingCalendar") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Meetings Calendar
                 </Link>
               </li>
               <li className="nav-item">
@@ -134,6 +154,16 @@ export default function Sidebar() {
                   } rounded px-3 py-2`}
                 >
                   Profile
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/ActionItems"
+                  className={`nav-link ${
+                    isActive("/ActionItems") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Action Items
                 </Link>
               </li>
             </>

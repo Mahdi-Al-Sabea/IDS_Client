@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 
@@ -7,12 +8,36 @@ export default function Sidebar() {
 
   const [user, setUser] = useState(null);
 
+  const [notifications, setNotifications] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await axios("http://127.0.0.1:8000/api/Notification");
+      setNotifications(response.data.data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/Notification/${id}`);
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== id)
+      );
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     try {
       const parsedUser = JSON.parse(storedUser);
       if (parsedUser) {
         setUser(parsedUser);
+        fetchNotifications(); // Fetch notifications when user is set
       } else {
         navigate("/signin");
       }
@@ -33,8 +58,9 @@ export default function Sidebar() {
   if (!user) return null;
 
   return (
+    <>
     <div
-      className="d-flex flex-column bg-dark text-white vh-100 shadow"
+      className="d-flex flex-column bg-dark text-white vh-100 shadow position-fixed"
       style={{ width: "240px" }}
     >
       <div className="p-3 border-bottom text-center">
@@ -116,9 +142,29 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-top p-3 small text-center">
-        <div className="mb-2">
+        <div className="mb-3">
           {user.name} ({user.role})
         </div>
+
+        <button
+          onClick={() => setShowModal(true)}
+          className="btn btn-outline-light btn-sm w-100 d-flex justify-content-between align-items-center mb-2"
+        >
+          <span className="d-flex align-items-center gap-2">
+            <span
+              role="img"
+              aria-label="Notifications"
+              style={{ fontSize: "1.25rem" }}
+            >
+              🔔
+            </span>
+            Notifications
+          </span>
+          {notifications.length > 0 && (
+            <span className="badge bg-danger rounded-pill">{notifications.length}</span>
+          )}
+        </button>
+
         <button
           className="btn btn-outline-light btn-sm w-100"
           onClick={handleLogout}
@@ -127,5 +173,75 @@ export default function Sidebar() {
         </button>
       </div>
     </div>
+
+
+
+
+
+
+          {showModal && (
+                  <div
+                    className={`modal fade ${showModal ? "show d-block" : ""}`}
+                    tabIndex="-1"
+                    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+                    role="dialog"
+                  >
+                    <div className="modal-dialog modal-lg">
+                      <div className="modal-content">
+                        <div className="modal-header">
+                          <h5 className="modal-title">🔔 Notifications</h5>
+                          <button
+                            type="button"
+                            className="btn-close"
+                            onClick={() => setShowModal(false)}
+                          ></button>
+                        </div>
+                        <div className="modal-body">
+                          <div className="list-group">
+                            {notifications.length > 0 ? (
+                              notifications.map((notification) => (
+                                <div
+                                  key={notification.id}
+                                  className="list-group-item list-group-item-action"
+                                >
+                                  <h6 className="mb-1">
+                                    {notification.subject}
+                                  </h6>
+                                  <p className="mb-1">
+                                    {notification.content}
+                                  </p>
+                                  <small className="text-muted">
+                                    {new Date(notification.created_at).toLocaleString()}
+                                  </small>
+                                  <button
+                                    className="btn btn-danger btn-sm float-end "
+                                    onClick={() => deleteNotification(notification.id)}
+                                  >
+                                    Mark as read
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center text-muted">
+                                No notifications available.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+
+
+
+
+
+
+
+
+    </>
   );
 }

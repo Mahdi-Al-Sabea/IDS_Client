@@ -5,7 +5,7 @@ const Layout = () => {
   return (
     <div className="d-flex">
       <Sidebar />         {/* Sidebar */}
-      <main className="flex-grow-1 p-4">
+      <main className="flex-grow-1 p-4" style={{ marginLeft: "240px" }}>
         <Outlet />       {/* Page content like Dashboard or Projects */}
       </main>
     </div>

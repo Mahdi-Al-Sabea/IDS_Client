@@ -45,6 +45,7 @@ export default function MeetingsList() {
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
+    description: "",
     startsAt: "",
     endsAt: "",
     room_id: "",
@@ -74,7 +75,7 @@ export default function MeetingsList() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/User", config); // Make sure this endpoint returns all users
+      const res = await axios.get("http://127.0.0.1:8000/api/UserNotPaginated", config); // Make sure this endpoint returns all users
       setUsers(res.data.data); // Adjust if data structure is different
     } catch (error) {
       console.error("Failed to fetch users", error);
@@ -122,6 +123,7 @@ export default function MeetingsList() {
     // Build payload as backend expects
     const payload = {
       title: newMeeting.title,
+      description : newMeeting.description, // Assuming description is same as title
       startsAt: newMeeting.startsAt,
       endsAt: newMeeting.endsAt,
       room_id: newMeeting.room_id,
@@ -314,10 +316,29 @@ export default function MeetingsList() {
 
             <form onSubmit={handleCreateMeeting} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <input
+                autoFocus
                 type="text"
                 placeholder="Title"
                 value={newMeeting.title}
                 onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
+                required
+                style={{
+                  padding: "0.75rem 1rem",
+                  fontSize: "1rem",
+                  borderRadius: "8px",
+                  border: "1.5px solid #ccc",
+                  outlineOffset: "2px",
+                  transition: "border-color 0.3s",
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
+              />
+
+              <input
+                type="text"
+                placeholder="Description"
+                value={newMeeting.description}
+                onChange={(e) => setNewMeeting({ ...newMeeting, description: e.target.value })}
                 required
                 style={{
                   padding: "0.75rem 1rem",

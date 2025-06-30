@@ -87,7 +87,7 @@ export default function MeetingsList() {
   const fetchRooms = async () => {
     try {
       const res = await axios.get("http://127.0.0.1:8000/api/Room", config); // Make sure this endpoint returns all users
-      setRooms(res.data.data); // Adjust if data structure is different
+      setRooms(res.data.data.data); // Adjust if data structure is different
     } catch (error) {
       console.error("Failed to fetch users", error);
     }

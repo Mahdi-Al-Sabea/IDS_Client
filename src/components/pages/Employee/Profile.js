@@ -52,8 +52,7 @@ export default function Profile() {
     profile_picture: Yup.mixed().nullable(),
   });
 
-  const handleUpdate = async (values, {setErrors, setSubmitting }) => {
-    
+  const handleUpdate = async (values, { setErrors, setSubmitting }) => {
     try {
       const formData = new FormData();
       formData.append("name", values.name);
@@ -83,15 +82,14 @@ export default function Profile() {
       alert("Profile updated successfully!");
       setEditing(false);
     } catch (error) {
-
-        if (error.response?.data?.message === "Validation Error") {
-            console.error("Validation errors:");
+      if (error.response?.data?.message === "Validation Error") {
+        console.error("Validation errors:");
         const errors = error.response.data.data;
         setErrors(errors); // setFormikErrors expects an object with field names as keys
         const messages = Object.values(errors).flat(); // flatten all error arrays
         alert(messages.join("\n"));
         setEditing(true); // Keep the form in edit mode
-        }
+      }
       console.error("Update failed:", error.response?.data || error);
     } finally {
       setSubmitting(false);
@@ -100,10 +98,36 @@ export default function Profile() {
 
   if (loading)
     return (
-      <div className="container mt-4">
-        <p>Loading profile...</p>
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
       </div>
     );
+    
   if (!user)
     return (
       <div className="container mt-4">
@@ -230,7 +254,11 @@ export default function Profile() {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={(e) => {e.preventDefault(); setEditing(true); console.log("Edit button clicked"); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setEditing(true);
+                    console.log("Edit button clicked");
+                  }}
                 >
                   ✏️ Edit Profile
                 </button>
@@ -242,4 +270,3 @@ export default function Profile() {
     </div>
   );
 }
-

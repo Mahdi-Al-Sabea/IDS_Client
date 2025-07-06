@@ -14,10 +14,14 @@ const ActionItemsPage = () => {
 
     const fetchTasks = async () => {
       try {
-        const profileRes = await axios.get("http://127.0.0.1:8000/api/User/Profile");
+        const profileRes = await axios.get(
+          "http://127.0.0.1:8000/api/User/Profile"
+        );
         const userId = profileRes.data.data.id;
 
-        const res = await axios.get(`http://127.0.0.1:8000/api/User/${userId}/ActionItems`);
+        const res = await axios.get(
+          `http://127.0.0.1:8000/api/User/${userId}/ActionItems`
+        );
         setTasks(res.data.data || []);
       } catch (err) {
         console.error("Error fetching action items:", err);
@@ -33,22 +37,52 @@ const ActionItemsPage = () => {
     const newStatus = task.status === "Completed" ? "Pending" : "Completed";
 
     try {
-      await axios.put(`http://127.0.0.1:8000/api/ActionItem/${task.id}/toggle`, {
-        status: newStatus,
-      });
+      await axios.put(
+        `http://127.0.0.1:8000/api/ActionItem/${task.id}/toggle`,
+        {
+          status: newStatus,
+        }
+      );
 
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === task.id ? { ...t, status: newStatus } : t
-        )
+        prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
       );
     } catch (error) {
       console.error("Error updating task:", error);
     }
   };
 
-  if (loading) return <p className="loading">Loading action items...</p>;
-
+  if (loading)
+    return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
   return (
     <div className="action-items-container">
       <h1>My Action Items</h1>
@@ -58,14 +92,27 @@ const ActionItemsPage = () => {
       ) : (
         <div className="task-cards">
           {tasks.map((t) => (
-            <div key={t.id} className={`task-card ${t.status === "Completed" ? "completed" : ""}`}>
+            <div
+              key={t.id}
+              className={`task-card ${
+                t.status === "Completed" ? "completed" : ""
+              }`}
+            >
               <div className="task-card-body">
                 <h3>{t.description}</h3>
-                <p><strong>Due:</strong> {new Date(t.dueDate).toLocaleDateString()}</p>
-                <p><strong>Assigned to:</strong> {t.assignee?.name} ({t.assignee?.email})</p>
+                <p>
+                  <strong>Due:</strong>{" "}
+                  {new Date(t.dueDate).toLocaleDateString()}
+                </p>
+                <p>
+                  <strong>Assigned to:</strong> {t.assignee?.name} (
+                  {t.assignee?.email})
+                </p>
               </div>
               <button className="toggle-btn" onClick={() => toggleTask(t)}>
-                {t.status === "Completed" ? "Mark as Pending" : "Mark as Complete"}
+                {t.status === "Completed"
+                  ? "Mark as Pending"
+                  : "Mark as Complete"}
               </button>
             </div>
           ))}

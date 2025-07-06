@@ -23,9 +23,14 @@ export default function MeetingsCalendar() {
     setError(null);
     try {
       setLoading(true);
-      const profileRes = await axios.get("http://127.0.0.1:8000/api/User/Profile");
+      const profileRes = await axios.get(
+        "http://127.0.0.1:8000/api/User/Profile"
+      );
       const id = profileRes.data.data.id;
-      const res = await axios.get(`http://127.0.0.1:8000/api/User/${id}/meetings`, config);
+      const res = await axios.get(
+        `http://127.0.0.1:8000/api/User/${id}/meetings`,
+        config
+      );
       setMeetings(res.data.data);
     } catch (err) {
       setError("Failed to fetch meetings.");
@@ -41,14 +46,44 @@ export default function MeetingsCalendar() {
   // Convert meetings to calendar events, title always "Meeting"
   const events = meetings.map((meeting) => ({
     id: meeting.id,
-    title: "Meeting",  // show generic "Meeting"
+    title: "Meeting", // show generic "Meeting"
     start: meeting.startsAt,
     end: meeting.endsAt,
   }));
 
   const closeModal = () => setSelectedMeeting(null);
 
-  if (loading) return <p>Loading meetings...</p>;
+  if (loading)
+    return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
@@ -65,7 +100,9 @@ export default function MeetingsCalendar() {
         events={events}
         eventClick={(info) => {
           const meetingId = info.event.id;
-          const meeting = meetings.find((m) => m.id.toString() === meetingId.toString());
+          const meeting = meetings.find(
+            (m) => m.id.toString() === meetingId.toString()
+          );
           if (meeting) setSelectedMeeting(meeting);
         }}
         height="auto"
@@ -76,9 +113,14 @@ export default function MeetingsCalendar() {
         <div
           style={{
             position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex", justifyContent: "center", alignItems: "center",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
             zIndex: 1000,
           }}
           onClick={closeModal}
@@ -95,10 +137,20 @@ export default function MeetingsCalendar() {
             onClick={(e) => e.stopPropagation()} // Prevent modal close on inner click
           >
             <h3>{selectedMeeting.title}</h3>
-            <p><strong>Description:</strong> {selectedMeeting.description}</p>
-            <p><strong>Status:</strong> {selectedMeeting.status}</p>
-            <p><strong>Start:</strong> {new Date(selectedMeeting.startsAt).toLocaleString()}</p>
-            <p><strong>End:</strong> {new Date(selectedMeeting.endsAt).toLocaleString()}</p>
+            <p>
+              <strong>Description:</strong> {selectedMeeting.description}
+            </p>
+            <p>
+              <strong>Status:</strong> {selectedMeeting.status}
+            </p>
+            <p>
+              <strong>Start:</strong>{" "}
+              {new Date(selectedMeeting.startsAt).toLocaleString()}
+            </p>
+            <p>
+              <strong>End:</strong>{" "}
+              {new Date(selectedMeeting.endsAt).toLocaleString()}
+            </p>
             {/* Add more details as you want */}
             <button onClick={closeModal} style={{ marginTop: "1rem" }}>
               Close

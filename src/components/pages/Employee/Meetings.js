@@ -45,6 +45,7 @@ export default function MeetingsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]); // Store selected users
   const [userId, setUserId] = useState(null); // Store user ID
+  const [currentMeetingId, setCurrentMeetingId] = useState(null); // null means it's a new meeting
 
   const [step, setStep] = useState(1); // step 1 = date picker, step 2 = form
   const [selectedDate, setSelectedDate] = useState(null);
@@ -261,7 +262,16 @@ export default function MeetingsList() {
     };
 
     try {
-      await axios.post("http://127.0.0.1:8000/api/Meeting", payload, config);
+      if (currentMeetingId) {
+        await axios.put(
+          `http://127.0.0.1:8000/api/Meeting/${currentMeetingId}`,
+          payload,
+          config
+        );
+      } else {
+        await axios.post("http://127.0.0.1:8000/api/Meeting", payload, config);
+      }
+
       setShowModal(false);
       setNewMeeting({
         title: "",
@@ -272,6 +282,7 @@ export default function MeetingsList() {
         attendees: [],
       });
       fetchMeetings();
+      setCurrentMeetingId(null);
     } catch (err) {
       if (err.response && err.response.data) {
         if (err.response.data.message) setFormError(err.response.data.message);
@@ -318,6 +329,7 @@ export default function MeetingsList() {
     setShowModal(true);
     setStep(2); // go to form step
     setSelectedDate(meeting.startsAt.split("T")[0]);
+    setCurrentMeetingId(meeting.id); // <--- add this
 
     setNewMeeting({
       ...meeting,
@@ -560,7 +572,13 @@ export default function MeetingsList() {
 
       `}</style>
 
-      <button className="btn-primary" onClick={() => setShowModal(true)}>
+      <button
+        className="btn-primary"
+        onClick={() => {
+          setShowModal(true);
+          setCurrentMeetingId(null);
+        }}
+      >
         + New Meeting
       </button>
 
@@ -1027,7 +1045,7 @@ export default function MeetingsList() {
                         cursor: "pointer",
                       }}
                     >
-                      Create
+                        {currentMeetingId ? "Update Meeting" : "Create Meeting"}
                     </button>
                   </div>
                 </form>

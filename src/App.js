@@ -61,7 +61,7 @@ function App() {
             <Layout />
           </PrivateRoute>
         }>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboardAdmin" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/users" element={<Users />} />

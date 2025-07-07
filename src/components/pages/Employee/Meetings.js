@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import FloorPlan from "../FloorPlan";
 
 function formatDateTime(dateStr) {
   const options = {
@@ -572,6 +573,8 @@ export default function MeetingsList() {
 
       `}</style>
 
+      <FloorPlan></FloorPlan>
+
       <button
         className="btn-primary"
         onClick={() => {
@@ -1045,7 +1048,7 @@ export default function MeetingsList() {
                         cursor: "pointer",
                       }}
                     >
-                        {currentMeetingId ? "Update Meeting" : "Create Meeting"}
+                      {currentMeetingId ? "Update Meeting" : "Create Meeting"}
                     </button>
                   </div>
                 </form>

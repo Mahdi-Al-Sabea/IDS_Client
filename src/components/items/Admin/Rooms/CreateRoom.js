@@ -4,9 +4,21 @@ import * as Yup from "yup";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import img from "../../../../assets/floorplan.jpg";
 const CreateRoom = () => {
   const [features, setFeatures] = useState([]);
+  const roomsPositions = [
+    { id: "1", label: "1", top: "19%", left: "61%" },
+    { id: "2", label: "2", top: "60%", left: "55%" },
+    { id: "3", label: "3", top: "50%", left: "75%" },
+    { id: "4", label: "4", top: "73%", left: "77%" },
+    { id: "5", label: "5", top: "75%", left: "24%" },
+    { id: "6", label: "6", top: "81%", left: "46%" },
+  ];
+    const handleClick = (roomId) => {
+    console.log("Reserve room:", roomId);
+    // navigate to reservation flow or open modal
+  };
 
   const fetchFeatures = async () => {
     try {
@@ -27,6 +39,7 @@ const CreateRoom = () => {
     roomname: "",
     floor: "",
     capacity: "",
+    position: "", // Default position
     features: [],
   };
 
@@ -43,6 +56,10 @@ const CreateRoom = () => {
     features: Yup.array()
       .of(Yup.number().integer())
       .nullable(),
+    position: Yup.number()
+      .required("Position is required")
+      .min(1, "Position must be at least 1")
+      .max(6, "Position must be at most 6"),
   });
 
   const createRoom = async (values, { setErrors, setSubmitting, resetForm }) => {
@@ -54,6 +71,7 @@ const CreateRoom = () => {
       console.log("Room created successfully:", response.data);
       toast.success("Room created successfully");
       resetForm();
+
     } catch (error) {
       if (error.response?.data?.message === "Validation Error") {
         const errors = error.response.data.data;
@@ -78,6 +96,26 @@ const CreateRoom = () => {
             <h4>🏨 Create New Room</h4>
           </div>
           <div className="card-body">
+
+
+{/*                   <div className="floorplan-image-container">
+                    <img src={
+                        img
+                    } alt="Floor Plan" className="floorplan-image" />
+                    {roomsPositions.map((pos) => {
+                      return (
+                        <button
+                          key={pos.id}
+                          className="floorplan-btn"
+                          style={{ top: pos.top, left: pos.left }}
+                          onClick={() => handleClick(pos.id)}
+                        >
+                          { pos.label}
+                        </button>
+                      );
+                    })}
+                  </div> */}
+
             <Formik
               initialValues={initialValues}
               validationSchema={validationSchema}
@@ -110,6 +148,14 @@ const CreateRoom = () => {
                       <Field name="capacity" type="number" className="form-control" />
                       <div className="text-danger">
                         <ErrorMessage name="capacity" />
+                      </div>
+                    </div>
+
+                    <div className="col-md-4">
+                      <label className="form-label">Position</label>
+                      <Field name="position" type="number" className="form-control" />
+                      <div className="text-danger">
+                        <ErrorMessage name="position" />
                       </div>
                     </div>
 

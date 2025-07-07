@@ -67,56 +67,62 @@ export default function Sidebar() {
           <h5 className="mb-0">📝 Room Manager</h5>
         </div>
 
-        <nav className="flex-grow-1 p-3">
-          <ul className="nav flex-column gap-1">
-            {user.role === "Admin" && (
-              <>
-                <li className="nav-item">
-                  <Link
-                    to="/dashboard"
-                    className={`nav-link ${
-                      isActive("/dashboard")
-                        ? "bg-light text-dark"
-                        : "text-white"
-                    } rounded px-3 py-2`}
-                  >
-                    Dashboard
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/features"
-                    className={`nav-link ${
-                      isActive("/features")
-                        ? "bg-light text-dark"
-                        : "text-white"
-                    } rounded px-3 py-2`}
-                  >
-                    Features
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/rooms"
-                    className={`nav-link ${
-                      isActive("/rooms") ? "bg-light text-dark" : "text-white"
-                    } rounded px-3 py-2`}
-                  >
-                    Rooms
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/users"
-                    className={`nav-link ${
-                      isActive("/users") ? "bg-light text-dark" : "text-white"
-                    } rounded px-3 py-2`}
-                  >
-                    Users
-                  </Link>
-                </li>
-              </>
-            )}
+      <nav className="flex-grow-1 p-3">
+        <ul className="nav flex-column gap-1">
+          {user.role === "Admin" && (
+            <>
+{/*               <li className="nav-item">
+                <Link
+                  to="/floorplan"
+                  className={`nav-link ${
+                    isActive("/floorplan") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Floor Plan
+                </Link>
+              </li> */}
+              <li className="nav-item">
+                <Link
+                  to="/dashboard"
+                  className={`nav-link ${
+                    isActive("/dashboard") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Dashboard
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/features"
+                  className={`nav-link ${
+                    isActive("/features") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Features
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/rooms"
+                  className={`nav-link ${
+                    isActive("/rooms") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Rooms
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/users"
+                  className={`nav-link ${
+                    isActive("/users") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Users
+                </Link>
+              </li>
+            </>
+          )}
 
             {(user.role === "Employee" || user.role === "Guest") && (
               <>

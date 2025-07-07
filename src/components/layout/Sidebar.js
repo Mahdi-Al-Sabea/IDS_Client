@@ -71,6 +71,16 @@ export default function Sidebar() {
         <ul className="nav flex-column gap-1">
           {user.role === "Admin" && (
             <>
+                          <li className="nav-item">
+                <Link
+                  to="/floorplan"
+                  className={`nav-link ${
+                    isActive("/floorplan") ? "bg-light text-dark" : "text-white"
+                  } rounded px-3 py-2`}
+                >
+                  Floor Plan
+                </Link>
+              </li>
               <li className="nav-item">
                 <Link
                   to="/dashboard"

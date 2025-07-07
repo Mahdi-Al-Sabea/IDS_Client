@@ -1,0 +1,22 @@
+.floorplan-container {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  background-image: url('https://picsum.photos/200/300');
+  background-size: cover;
+}
+.floorplan-image {
+  width: 100%;
+  display: block;
+}
+.floorplan-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 80, 200, 0.8);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}

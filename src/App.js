@@ -16,6 +16,7 @@ import MeetingDetails from "./components/pages/Employee/MeetingDetails";
 import MeetingsCalendar from "./components/pages/Employee/MeetingsCalendar";
 import EmployeeDashboard from "./components/pages/Employee/dashboardEmployee";
 import ActionItemsPage from "./components/pages/Employee/ActionItems";
+import FloorPlan from "./components/pages/Employee/FloorPlan";
 
 
 axios.interceptors.request.use((config) => {
@@ -37,6 +38,9 @@ const PrivateRoute = ({ children /* , allowedRoles */ }) => {
   /* const userRole = data.user.role; */ // Adjust this based on your token structure
 
   if (!token || !user || isTokenExpired()) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("token_exp");
     return <Navigate to="/signin" replace />;
   }
 
@@ -72,6 +76,7 @@ function App() {
           <Route path="/dashboardEmployee" element={<EmployeeDashboard />} />
           <Route path="/meetingCalendar" element={<MeetingsCalendar />} />
           <Route path="/ActionItems" element={<ActionItemsPage />} />
+          <Route path="/floorplan" element={<FloorPlan />} />
           {/* Add more protected routes here */}
 
 

@@ -76,6 +76,10 @@ const RoomsTable = () => {
     roomname: Yup.string().required("Room Name is required").max(255, "Room Name must be at most 255 characters"),
     floor: Yup.number().required("Floor is required"),
     capacity: Yup.number().required("Capacity is required").min(10, "Capacity must be at least 10").max(1000, "Capacity must be at most 1000"),
+    position: Yup.number()
+      .required("Position is required")
+      .min(1, "Position must be at least 1")
+      .max(6, "Position must be at most 6"),
   });
 
 
@@ -173,7 +177,7 @@ const RoomsTable = () => {
                     <th>Room Name</th>
                     <th>Floor</th>
                     <th>Capacity</th>
-
+                    <th>Position</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -184,6 +188,7 @@ const RoomsTable = () => {
                         <td>{room.roomname}</td>
                         <td>{room.floor}</td>
                         <td>{room.capacity}</td>
+                        <td>{room.position}</td>
                         <td>
                           <div className="d-flex justify-content-center gap-2">
                             <button
@@ -258,6 +263,7 @@ const RoomsTable = () => {
                     roomname: selectedRoom.roomname || "",
                     floor: selectedRoom.floor || "",
                     capacity: selectedRoom.capacity || "",
+                    position: selectedRoom.position || "", // Default to "" if not set
                     features: selectedRoom.features ? selectedRoom.features.map(f => f.id) : [],
                   }}
                   validationSchema={validationSchema}
@@ -284,6 +290,7 @@ const RoomsTable = () => {
                         <label className="form-label">Floor</label>
                         <Field
                           name="floor"
+                          type="number"
                           className="form-control"
                           disabled={!edit}
                         />
@@ -301,6 +308,19 @@ const RoomsTable = () => {
                         />
                         <div className="text-danger">
                           <ErrorMessage name="capacity" />
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <label className="form-label">Position</label>
+                        <Field
+                          name="position"
+                          type="number"
+                          className="form-control"
+                          disabled={!edit}
+                        />
+                        <div className="text-danger">
+                          <ErrorMessage name="position" />
                         </div>
                       </div>
 

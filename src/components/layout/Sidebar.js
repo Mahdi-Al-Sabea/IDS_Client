@@ -71,7 +71,7 @@ export default function Sidebar() {
         <ul className="nav flex-column gap-1">
           {user.role === "Admin" && (
             <>
-                          <li className="nav-item">
+{/*               <li className="nav-item">
                 <Link
                   to="/floorplan"
                   className={`nav-link ${
@@ -80,7 +80,7 @@ export default function Sidebar() {
                 >
                   Floor Plan
                 </Link>
-              </li>
+              </li> */}
               <li className="nav-item">
                 <Link
                   to="/dashboard"

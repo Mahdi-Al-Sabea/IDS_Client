@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { ToastContainer, toast } from 'react-toastify';
 
-const CreateUser = () => {
+const CreateUser = ({toggle, setToggle}) => {
 
 
 
@@ -21,6 +21,7 @@ const CreateUser = () => {
       //alert("User created successfully");
       toast.success("User created successfully");
       resetForm(); // Reset the form after successful submission
+      setToggle(!toggle); // Toggle to refresh the user list
     } catch (error) {
       if (error.response?.data?.message === "Validation Error") {
         console.error("Validation errors:");

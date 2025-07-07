@@ -5,7 +5,14 @@ import axios from "axios";
 import { useEffect } from "react";
 import { ToastContainer, toast } from 'react-toastify';
 
-const FeaturesTable = () => {
+const FeaturesTable = ({toggle,setToggle}) => {
+
+
+    useEffect(() => {
+    console.log("Toggle changed, refetching features");
+    fetchFeatures();
+  }, [toggle]); // refetch when page changes
+
   const [features, setFeatures] = useState(null);
   const [searchParams, setSearchParams] = useState({
     title: "",

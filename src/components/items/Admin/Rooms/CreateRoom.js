@@ -5,7 +5,11 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import img from "../../../../assets/floorplan.jpg";
-const CreateRoom = () => {
+const CreateRoom = ({toggle,setToggle}) => {
+
+
+
+
   const [features, setFeatures] = useState([]);
   const roomsPositions = [
     { id: "1", label: "1", top: "19%", left: "61%" },
@@ -71,6 +75,7 @@ const CreateRoom = () => {
       console.log("Room created successfully:", response.data);
       toast.success("Room created successfully");
       resetForm();
+      setToggle(!toggle); // Toggle to refresh the rooms table
 
     } catch (error) {
       if (error.response?.data?.message === "Validation Error") {

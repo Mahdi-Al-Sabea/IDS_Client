@@ -5,7 +5,7 @@ import axios from "axios";
 import { useEffect } from "react";
 import { ToastContainer, toast } from 'react-toastify';
 
-const UsersTable = () => {
+const UsersTable = ({toggle, setToggle}) => {
   const [users, setUsers] = useState(null);
   const [searchParams, setSearchParams] = useState({
     name: "",
@@ -128,6 +128,10 @@ const UsersTable = () => {
   useEffect(() => {
     fetchUsers();
   }, [currentPage]); // refetch when page changes
+
+  useEffect(() => {
+    fetchUsers();
+  }, [toggle]); // refetch when toggle changes
 
   if (!users) {
     return <div>Loading...</div>;

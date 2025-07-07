@@ -54,7 +54,6 @@ h1 {
 }
 
 .task-card.completed h3 {
-  text-decoration: line-through;
   color: #888;
 }
 

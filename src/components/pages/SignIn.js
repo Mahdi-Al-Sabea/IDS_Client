@@ -49,13 +49,14 @@ export default function SignIn() {
 
     localStorage.setItem('token', JSON.stringify(token));
     localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('id', user.id);
     localStorage.setItem('token_exp', expirationTimestamp.toISOString()); // Store full response data
 
     console.log('User data:', user); // Log user data to console
     console.log('Token:', token); // Log token to console
     console.log('Response:', response); // Log full response data to console
 
-      if(user.role === 'Employee') {
+      if(user.role === 'Employee' || user.role === 'Guest') {
         navigate('/dashboardEmployee');
       }else if(user.role === 'Admin') {
         navigate('/dashboardAdmin');

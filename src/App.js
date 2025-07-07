@@ -18,7 +18,6 @@ import EmployeeDashboard from "./components/pages/Employee/dashboardEmployee";
 import ActionItemsPage from "./components/pages/Employee/ActionItems";
 import FloorPlan from "./components/pages/Employee/FloorPlan";
 
-
 axios.interceptors.request.use((config) => {
   const token = JSON.parse(localStorage.getItem("token"));
   if (token) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -42,6 +42,12 @@ export default function MeetingsList() {
   const [formError, setFormError] = useState(null);
   const [users, setUsers] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState([]); // Store selected users
+  const [userId, setUserId] = useState(null); // Store user ID
+
+  const [step, setStep] = useState(1); // step 1 = date picker, step 2 = form
+  const [selectedDate, setSelectedDate] = useState(null);
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -53,9 +59,11 @@ export default function MeetingsList() {
     attendees: [], // updated from attendeesInput to an array
   });
 
+  const errorRef = useRef(null);
+
   const navigate = useNavigate();
 
-  const token = "13|qR0X2wbQvVBZTShVBBz04ZpbbsooVxrh3j82QChc8d574f42"; // Replace with your token logic
+  const token = localStorage.getItem("token");
   const config = {
     headers: { Authorization: `Bearer ${token}` },
   };
@@ -64,9 +72,14 @@ export default function MeetingsList() {
     setError(null);
     try {
       setLoading(true);
-      const profileRes = await axios.get("http://127.0.0.1:8000/api/User/Profile");
+      const profileRes = await axios.get(
+        "http://127.0.0.1:8000/api/User/Profile"
+      );
       const id = profileRes.data.data.id;
-      const res = await axios.get(`http://127.0.0.1:8000/api/User/${id}/meetings`, config);
+      const res = await axios.get(
+        `http://127.0.0.1:8000/api/User/${id}/meetings`,
+        config
+      );
       setMeetings(res.data.data);
     } catch (err) {
       setError("Failed to fetch meetings.");
@@ -77,7 +90,10 @@ export default function MeetingsList() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/UserNotPaginated", config); // Make sure this endpoint returns all users
+      const res = await axios.get(
+        "http://127.0.0.1:8000/api/UserNotPaginated",
+        config
+      ); // Make sure this endpoint returns all users
       setUsers(res.data.data); // Adjust if data structure is different
     } catch (error) {
       console.error("Failed to fetch users", error);
@@ -86,18 +102,127 @@ export default function MeetingsList() {
 
   const fetchRooms = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/Room", config); // Make sure this endpoint returns all users
-      setRooms(res.data.data.data); // Adjust if data structure is different
+      const res = await axios.get(
+        "http://127.0.0.1:8000/api/RoomNotPaginated",
+        config
+      ); // Make sure this endpoint returns all users
+      setRooms(res.data.data); // Adjust if data structure is different
     } catch (error) {
       console.error("Failed to fetch users", error);
     }
+  };
+
+  const renderMeetingsGroupedByDate = (meetingsList, type = "upcoming") => {
+    const grouped = meetingsList.reduce((acc, meeting) => {
+      const dateKey = new Date(meeting.startsAt).toLocaleDateString();
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(meeting);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([date, items]) => (
+      <div key={date} className="meeting-date-group">
+        <h4 className="meeting-date-title">📅 {date}</h4>
+        <div className="meeting-card-grid">
+          {items.map((m) => (
+            <div
+              key={m.id}
+              className={`meeting-card-ui ${
+                m.isOngoing
+                  ? "ongoing-highlight"
+                  : type === "past"
+                  ? "meeting-past"
+                  : "meeting-upcoming"
+              }`}
+              onClick={() => navigate(`/meeting/${m.id}`)}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="meeting-card-header">
+                <h3 className="meeting-title">{m.title}</h3>
+
+                <div className="meeting-tags">
+                  {m.organizer_id == userId && (
+                    <span className="organizer-badge">
+                      You are the Organizer
+                    </span>
+                  )}
+                  {m.isOngoing && (
+                    <span className="status-chip ongoing">Ongoing</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="meeting-details">
+                <p>
+                  <strong>🕒 Time:</strong>{" "}
+                  {new Date(m.startsAt).toLocaleTimeString()} -{" "}
+                  {new Date(m.endsAt).toLocaleTimeString()}
+                </p>
+                <p>
+                  <strong>🏢 Room:</strong> {m.room?.roomname}{" "}
+                  <span className="room-floor">(Floor {m.room?.floor})</span>
+                </p>
+
+                <div className="agendas-section">
+                  <strong>📝 Agendas:</strong>
+                  {m.agendas.length > 0 ? (
+                    <ul className="agenda-list">
+                      {m.agendas.map((a) => (
+                        <li key={a.id}>{a.description}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="no-agenda">No agendas</p>
+                  )}
+                </div>
+
+                <p>
+                  <strong>👥 Attendees:</strong>{" "}
+                  {m.attendees.map((a) => a.name).join(", ")}
+                </p>
+              </div>
+
+              {m.organizer_id == userId && type != "past" && (
+                <div className="organizer-actions">
+                  <button
+                    className="reschedule-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReschedule(m);
+                    }}
+                  >
+                    Reschedule
+                  </button>
+                  <button
+                    className="cancel-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancel(m.id);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    ));
   };
 
   useEffect(() => {
     fetchMeetings();
     fetchUsers();
     fetchRooms();
+    setUserId(localStorage.getItem("id"));
   }, []);
+
+  useEffect(() => {
+    if (formError && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [formError]);
 
   const handleAgendaChange = (index, value) => {
     const updated = [...newMeeting.agendas];
@@ -106,7 +231,10 @@ export default function MeetingsList() {
   };
 
   const addAgenda = () => {
-    setNewMeeting((nm) => ({ ...nm, agendas: [...nm.agendas, { description: "" }] }));
+    setNewMeeting((nm) => ({
+      ...nm,
+      agendas: [...nm.agendas, { description: "" }],
+    }));
   };
 
   const removeAgenda = (index) => {
@@ -122,10 +250,9 @@ export default function MeetingsList() {
 
     const attendees = newMeeting.attendees;
 
-    // Build payload as backend expects
     const payload = {
       title: newMeeting.title,
-      description : newMeeting.description, // Assuming description is same as title
+      description: newMeeting.description, // Assuming description is same as title
       startsAt: newMeeting.startsAt,
       endsAt: newMeeting.endsAt,
       room_id: newMeeting.room_id,
@@ -155,14 +282,124 @@ export default function MeetingsList() {
     }
   };
 
+  const handleCancel = async (meetingId) => {
+    if (!window.confirm("Are you sure you want to cancel this meeting?"))
+      return;
+
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
+        config
+      );
+      alert("Meeting cancelled.");
+      fetchMeetings();
+    } catch (error) {
+      console.error("Cancel error", error);
+      alert("Failed to cancel meeting.");
+    }
+  };
+
+  function toDatetimeLocal(dateStr) {
+    const d = new Date(dateStr);
+    const pad = (num) => num.toString().padStart(2, "0");
+
+    const yyyy = d.getFullYear();
+    const MM = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+
+    return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+  }
+
+  const handleReschedule = (meeting) => {
+    console.log("Rescheduling meeting:", meeting);
+    // You can reuse your modal form and populate it with `meeting`
+    setShowModal(true);
+    setStep(2); // go to form step
+    setSelectedDate(meeting.startsAt.split("T")[0]);
+
+    setNewMeeting({
+      ...meeting,
+      room_id: meeting.room?.id || "",
+      agendas: meeting.agendas.map((a) => ({ description: a.description })),
+      attendees: meeting.attendees.map((a) => a.id), // backend expects IDs
+    });
+
+    setSelectedUsers(meeting.attendees); // to show selected attendee chips
+  };
+
   const { ongoing, upcoming, previous } = splitMeetings(meetings);
 
-  if (loading) return <p style={{ padding: 20 }}>Loading meetings...</p>;
+  if (loading)
+    return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
+
   if (error) return <p style={{ padding: 20, color: "red" }}>{error}</p>;
 
   return (
     <>
       <style>{`
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 5px solid #f3f3f3;
+          border-top: 5px solid #0d6efd;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .organizer-badge {
+          background-color: #198754; /* Bootstrap's green */
+          color: white;
+          font-size: 0.75rem;
+          padding: 4px 8px;
+          border-radius: 12px;
+          margin-left: 8px;
+          display: inline-block;
+          font-weight: 500;
+        }
+
+        .meeting-tags {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          margin-top: 4px;
+        }
+
         .meetings-section {
           margin-bottom: 2rem;
         }
@@ -234,6 +471,93 @@ export default function MeetingsList() {
           font-weight: bold;
           cursor: pointer;
         }
+        .meeting-card-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 1.2rem;
+        }
+
+        .organizer-actions {
+          display: flex;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+        }
+
+        .reschedule-btn,
+        .cancel-btn {
+          padding: 0.4rem 0.75rem;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+        }
+
+        .reschedule-btn {
+          background-color: #0d6efd;
+          color: white;
+        }
+
+        .cancel-btn {
+          background-color: #dc3545;
+          color: white;
+        }
+        .reschedule-btn:hover {
+          opacity: 0.7;
+          background-color: #0d6efd;
+        }
+        .cancel-btn:hover {
+          opacity: 0.7;
+          background-color: #dc3545;
+        }
+
+        /* Default Card */
+        .meeting-card-ui {
+          background: #fff;
+          border-radius: 10px;
+          padding: 1rem;
+          margin-bottom: 1rem;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+          transition: 0.3s ease;
+        }
+
+        /* Upcoming */
+        .meeting-upcoming {
+          border-left: 6px solid #4c6ef5; /* Blue */
+        }
+
+        /* Past */
+        .meeting-past {
+          background-color: #f1f3f5;
+          border-left: 6px solid #adb5bd; /* Gray */
+        }
+
+        /* Ongoing */
+        .ongoing-highlight {
+          background-color: #e6fcf5;
+          border-left: 6px solid #20c997; /* Green */
+        }
+
+        /* Ongoing Tag */
+        .status-chip.ongoing {
+          background-color: #20c997;
+          color: white;
+          padding: 0.2rem 0.5rem;
+          border-radius: 5px;
+          font-size: 0.75rem;
+        }
+
+        /* Organizer badge */
+        .organizer-badge {
+          background-color: #ffd43b;
+          color: #000;
+          padding: 0.2rem 0.5rem;
+          border-radius: 5px;
+          font-size: 0.75rem;
+          margin-left: 0.5rem;
+        }
+
+
       `}</style>
 
       <button className="btn-primary" onClick={() => setShowModal(true)}>
@@ -267,11 +591,17 @@ export default function MeetingsList() {
               flexDirection: "column",
               maxHeight: "90vh",
               overflowY: "auto",
+              scrollbarWidth: "none" /* Firefox */,
+              msOverflowStyle: "none" /* IE and Edge */,
             }}
           >
             <button
               aria-label="Close modal"
-              onClick={() => setShowModal(false)}
+              onClick={() => {
+                setShowModal(false);
+                setStep(1);
+                setSelectedDate(null);
+              }}
               style={{
                 position: "absolute",
                 top: "16px",
@@ -282,263 +612,430 @@ export default function MeetingsList() {
                 fontWeight: "700",
                 color: "#999",
                 cursor: "pointer",
-                transition: "color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#0d6efd")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#999")}
             >
               &times;
             </button>
 
-            <h3
-              style={{
-                marginBottom: "1.5rem",
-                fontSize: "1.8rem",
-                fontWeight: "700",
-                color: "#0d6efd",
-              }}
-            >
-              Create New Meeting
-            </h3>
+            {step === 1 && (
+              <>
+                <h3
+                  style={{
+                    marginBottom: "1.5rem",
+                    fontSize: "1.8rem",
+                    fontWeight: "700",
+                    color: "#0d6efd",
+                  }}
+                >
+                  Select Meeting Date
+                </h3>
 
-            {formError && (
-              <p
-                style={{
-                  color: "red",
-                  marginBottom: "1rem",
-                  fontWeight: "600",
-                  backgroundColor: "#ffe0e0",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "8px",
-                }}
-              >
-                {formError}
-              </p>
+                <input
+                  type="date"
+                  value={selectedDate || ""}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  style={{
+                    padding: "0.75rem 1rem",
+                    fontSize: "1rem",
+                    borderRadius: "8px",
+                    border: "1.5px solid #ccc",
+                    marginBottom: "1.5rem",
+                  }}
+                />
+
+                <button
+                  onClick={() => {
+                    const defaultStartTime = `${selectedDate}T09:00`;
+                    const defaultEndTime = `${selectedDate}T10:00`;
+                    setNewMeeting({
+                      ...newMeeting,
+                      startsAt: defaultStartTime,
+                      endsAt: defaultEndTime,
+                    });
+                    setStep(2);
+                  }}
+                  disabled={!selectedDate}
+                  style={{
+                    backgroundColor: "#0d6efd",
+                    color: "white",
+                    padding: "0.75rem 1.5rem",
+                    fontWeight: "600",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: selectedDate ? "pointer" : "not-allowed",
+                    opacity: selectedDate ? 1 : 0.6,
+                  }}
+                >
+                  Continue to Form
+                </button>
+              </>
             )}
 
-            <form onSubmit={handleCreateMeeting} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <input
-                autoFocus
-                type="text"
-                placeholder="Title"
-                value={newMeeting.title}
-                onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
-                required
-                style={{
-                  padding: "0.75rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #ccc",
-                  outlineOffset: "2px",
-                  transition: "border-color 0.3s",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
-              />
+            {step === 2 && (
+              <>
+                <h3
+                  style={{
+                    marginBottom: "1.5rem",
+                    fontSize: "1.8rem",
+                    fontWeight: "700",
+                    color: "#0d6efd",
+                  }}
+                >
+                  Create New Meeting
+                </h3>
 
-              <input
-                type="text"
-                placeholder="Description"
-                value={newMeeting.description}
-                onChange={(e) => setNewMeeting({ ...newMeeting, description: e.target.value })}
-                required
-                style={{
-                  padding: "0.75rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #ccc",
-                  outlineOffset: "2px",
-                  transition: "border-color 0.3s",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
-              />
+                {formError && (
+                  <p
+                    ref={errorRef}
+                    style={{
+                      color: "red",
+                      marginBottom: "1rem",
+                      fontWeight: "600",
+                      backgroundColor: "#ffe0e0",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    {formError}
+                  </p>
+                )}
 
-              <input
-                type="datetime-local"
-                value={newMeeting.startsAt}
-                onChange={(e) => setNewMeeting({ ...newMeeting, startsAt: e.target.value })}
-                required
-                style={{
-                  padding: "0.75rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #ccc",
-                  outlineOffset: "2px",
-                  transition: "border-color 0.3s",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
-              />
-
-              <input
-                type="datetime-local"
-                value={newMeeting.endsAt}
-                onChange={(e) => setNewMeeting({ ...newMeeting, endsAt: e.target.value })}
-                required
-                style={{
-                  padding: "0.75rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #ccc",
-                  outlineOffset: "2px",
-                  transition: "border-color 0.3s",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
-              />
-    
-              <label style={{ marginTop: '1rem', fontWeight: 'bold' }}>Select Room:</label>
-              <select
-                value={newMeeting.room_id}
-                onChange={(e) => setNewMeeting({ ...newMeeting, room_id: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-              >
-                {rooms.map(room => (
-                  <option key={room.id} value={room.id}>
-                    {room.roomname} (Capacity: {room.capacity})
-                  </option>
-                ))}
-              </select>
-
-              <label style={{ fontWeight: "600", color: "#555" }}>Agendas</label>
-              {newMeeting.agendas.map((agenda, idx) => (
-                <div key={idx} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <form
+                  onSubmit={handleCreateMeeting}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1.25rem",
+                  }}
+                >
                   <input
+                    autoFocus
                     type="text"
-                    placeholder="Agenda description"
-                    value={agenda.description}
-                    onChange={(e) => handleAgendaChange(idx, e.target.value)}
+                    placeholder="Title"
+                    value={newMeeting.title}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, title: e.target.value })
+                    }
                     required
                     style={{
-                      flexGrow: 1,
-                      padding: "0.6rem 1rem",
+                      padding: "0.75rem 1rem",
                       fontSize: "1rem",
                       borderRadius: "8px",
                       border: "1.5px solid #ccc",
-                      outlineOffset: "2px",
-                      transition: "border-color 0.3s",
                     }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
                   />
-                  {newMeeting.agendas.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAgenda(idx)}
+
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={newMeeting.description}
+                    onChange={(e) =>
+                      setNewMeeting({
+                        ...newMeeting,
+                        description: e.target.value,
+                      })
+                    }
+                    required
+                    style={{
+                      padding: "0.75rem 1rem",
+                      fontSize: "1rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                    }}
+                  />
+
+                  <input
+                    type="datetime-local"
+                    value={toDatetimeLocal(newMeeting.startsAt)}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, startsAt: e.target.value })
+                    }
+                    required
+                    style={{
+                      padding: "0.75rem 1rem",
+                      fontSize: "1rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                    }}
+                  />
+
+                  <input
+                    type="datetime-local"
+                    value={toDatetimeLocal(newMeeting.endsAt)}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, endsAt: e.target.value })
+                    }
+                    required
+                    style={{
+                      padding: "0.75rem 1rem",
+                      fontSize: "1rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                    }}
+                  />
+
+                  <label style={{ fontWeight: "bold" }}>Select Room:</label>
+                  <select
+                    value={newMeeting.room_id}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, room_id: e.target.value })
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem",
+                      marginBottom: "1rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                    }}
+                  >
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.roomname} (Capacity: {room.capacity})
+                      </option>
+                    ))}
+                  </select>
+
+                  <label style={{ fontWeight: "600", color: "#555" }}>
+                    Agendas
+                  </label>
+                  {newMeeting.agendas.map((agenda, idx) => (
+                    <div
+                      key={idx}
                       style={{
-                        backgroundColor: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        padding: "0.4rem 0.8rem",
-                        cursor: "pointer",
-                        fontWeight: "700",
-                        fontSize: "1rem",
-                        height: "38px",
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "center",
                       }}
                     >
-                      &times;
+                      <input
+                        type="text"
+                        placeholder="Agenda description"
+                        value={agenda.description}
+                        onChange={(e) =>
+                          handleAgendaChange(idx, e.target.value)
+                        }
+                        required
+                        style={{
+                          flexGrow: 1,
+                          padding: "0.6rem 1rem",
+                          fontSize: "1rem",
+                          borderRadius: "8px",
+                          border: "1.5px solid #ccc",
+                        }}
+                      />
+                      {newMeeting.agendas.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAgenda(idx)}
+                          style={{
+                            backgroundColor: "#dc3545",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "6px",
+                            padding: "0.4rem 0.8rem",
+                            cursor: "pointer",
+                            fontWeight: "700",
+                            fontSize: "1rem",
+                            height: "38px",
+                          }}
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addAgenda}
+                    style={{
+                      alignSelf: "flex-start",
+                      backgroundColor: "#0d6efd",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "0.5rem 1rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      marginTop: "-0.5rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    + Add Agenda
+                  </button>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <label style={{ fontWeight: "bold" }}>
+                      Select Attendees:
+                    </label>
+
+                    {/* Selected users chips */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      {selectedUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          style={{
+                            backgroundColor: "#e0f0ff",
+                            padding: "0.3rem 0.75rem",
+                            borderRadius: "999px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            fontSize: "0.95rem",
+                          }}
+                        >
+                          {user.name}
+                          <button
+                            onClick={() => {
+                              setSelectedUsers((prev) =>
+                                prev.filter((u) => u.id !== user.id)
+                              );
+                              setNewMeeting((prev) => ({
+                                ...prev,
+                                attendees: prev.attendees.filter(
+                                  (id) => id !== user.id
+                                ),
+                              }));
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "#0d6efd",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              fontSize: "1.2rem",
+                              lineHeight: "1",
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Search input */}
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      style={{
+                        padding: "0.6rem 1rem",
+                        fontSize: "1rem",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                      }}
+                    />
+
+                    {/* Filtered user dropdown */}
+                    <div
+                      style={{
+                        maxHeight: "120px",
+                        overflowY: "auto",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      {users
+                        .filter(
+                          (user) =>
+                            user.name
+                              .toLowerCase()
+                              .includes(searchTerm.toLowerCase()) &&
+                            !selectedUsers.find((u) => u.id === user.id)
+                        )
+                        .map((user) => (
+                          <div
+                            key={user.id}
+                            onClick={() => {
+                              setSelectedUsers((prev) => [...prev, user]);
+                              setNewMeeting((prev) => ({
+                                ...prev,
+                                attendees: [...prev.attendees, user.id],
+                              }));
+                              setSearchTerm("");
+                            }}
+                            style={{
+                              padding: "0.5rem 1rem",
+                              cursor: "pointer",
+                              borderBottom: "1px solid #eee",
+                              backgroundColor: "#f9f9f9",
+                              transition: "background-color 0.2s",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "#e6f0ff")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "#f9f9f9")
+                            }
+                          >
+                            {user.name} ({user.email})
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "1rem",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        setStep(1);
+                        setSelectedDate(null);
+                      }}
+                      style={{
+                        padding: "0.7rem 1.5rem",
+                        fontWeight: "600",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                        backgroundColor: "white",
+                        color: "#555",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cancel
                     </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addAgenda}
-                style={{
-                  alignSelf: "flex-start",
-                  backgroundColor: "#0d6efd",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "0.5rem 1rem",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  marginTop: "-0.5rem",
-                  marginBottom: "1rem",
-                }}
-              >
-                + Add Agenda
-              </button>
 
-              <select
-                multiple
-                value={newMeeting.attendees}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, (option) => option.value);
-                  setNewMeeting({ ...newMeeting, attendees: selected });
-                }}
-                style={{
-                  padding: "0.75rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "8px",
-                  border: "1.5px solid #ccc",
-                  outlineOffset: "2px",
-                  height: "150px",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#0d6efd")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#ccc")}
-              >
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", marginTop: "0.5rem" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    padding: "0.7rem 1.5rem",
-                    fontWeight: "600",
-                    borderRadius: "8px",
-                    border: "1.5px solid #ccc",
-                    backgroundColor: "white",
-                    color: "#555",
-                    cursor: "pointer",
-                    transition: "background-color 0.3s, border-color 0.3s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f5f5f5";
-                    e.currentTarget.style.borderColor = "#0d6efd";
-                    e.currentTarget.style.color = "#0d6efd";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "white";
-                    e.currentTarget.style.borderColor = "#ccc";
-                    e.currentTarget.style.color = "#555";
-                  }}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  style={{
-                    padding: "0.7rem 1.5rem",
-                    fontWeight: "700",
-                    borderRadius: "8px",
-                    border: "none",
-                    backgroundColor: "#0d6efd",
-                    color: "white",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgb(13 110 253 / 0.5)",
-                    transition: "background-color 0.3s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#0b5ed7")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#0d6efd")}
-                >
-                  Create
-                </button>
-              </div>
-            </form>
+                    <button
+                      type="submit"
+                      style={{
+                        padding: "0.7rem 1.5rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor: "#0d6efd",
+                        color: "white",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Create
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
-      
 
       <section className="meetings-section">
         <h3 className="meetings-title" style={{ color: "#198754" }}>
@@ -547,17 +1044,10 @@ export default function MeetingsList() {
         {ongoing.length === 0 ? (
           <p className="text-muted">No ongoing meetings.</p>
         ) : (
-          <div className="meetings-list ongoing-meetings">
-            {ongoing.map(({ id, title, startsAt }) => (
-              <div className="meeting-card ongoing-highlight" key={id} onClick={() => navigate(`/meeting/${id}`)}>
-                <div className="meeting-circle" />
-                <div className="meeting-texts">
-                  <div className="meeting-title">{title}</div>
-                  <div className="meeting-datetime">{formatDateTime(startsAt)} — ongoing</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          renderMeetingsGroupedByDate(
+            ongoing.map((m) => ({ ...m, isOngoing: true })),
+            "upcoming"
+          )
         )}
       </section>
 
@@ -568,38 +1058,24 @@ export default function MeetingsList() {
         {upcoming.length === 0 ? (
           <p className="text-muted">No upcoming meetings.</p>
         ) : (
-          <div className="meetings-list upcoming-meetings">
-            {upcoming.map(({ id, title, startsAt }) => (
-              <div className="meeting-card" key={id} onClick={() => navigate(`/meeting/${id}`)}>
-                <div className="meeting-circle" />
-                <div className="meeting-texts">
-                  <div className="meeting-title">{title}</div>
-                  <div className="meeting-datetime">{formatDateTime(startsAt)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          renderMeetingsGroupedByDate(
+            upcoming.map((m) => ({ ...m, isOngoing: false })),
+            "upcoming"
+          )
         )}
       </section>
 
-      <section className="meetings-section previous-meetings">
+      <section className="meetings-section">
         <h3 className="meetings-title" style={{ color: "#6c757d" }}>
           Previous Meetings
         </h3>
         {previous.length === 0 ? (
           <p className="text-muted">No previous meetings.</p>
         ) : (
-          <div className="meetings-list">
-            {previous.map(({ id, title, startsAt }) => (
-              <div className="meeting-card" key={id} onClick={() => navigate(`/meeting/${id}`)}>
-                <div className="meeting-circle" />
-                <div className="meeting-texts">
-                  <div className="meeting-title">{title}</div>
-                  <div className="meeting-datetime">{formatDateTime(startsAt)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          renderMeetingsGroupedByDate(
+            previous.map((m) => ({ ...m, isOngoing: false })),
+            "past"
+          )
         )}
       </section>
     </>

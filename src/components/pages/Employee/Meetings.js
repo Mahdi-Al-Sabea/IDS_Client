@@ -23,7 +23,7 @@ function splitMeetings(meetings) {
   meetings.forEach((m) => {
     const start = new Date(m.startsAt);
     const end = new Date(m.endsAt);
-    if (start <= now && now <= end) ongoing.push(m);
+    if (start <= now && now <= end && m.status != "completed") ongoing.push(m);
     else if (start > now) upcoming.push(m);
     else previous.push(m);
   });
@@ -62,7 +62,7 @@ export default function MeetingsList() {
     endsAt: "",
     room_id: "",
     agendas: [{ description: "" }],
-    attendees: [], // updated from attendeesInput to an array
+    attendees: [], // updated from attendeesIn to an array
   });
 
   const errorRef = useRef(null);
@@ -220,6 +220,17 @@ export default function MeetingsList() {
                   >
                     Cancel
                   </button>
+                  {m.isOngoing && (
+                    <button
+                      className="complete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleComplete(m.id);
+                      }}
+                    >
+                      Complete
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -335,6 +346,23 @@ export default function MeetingsList() {
     } catch (error) {
       console.error("Cancel error", error);
       alert("Failed to cancel meeting.");
+    }
+  };
+
+  const handleComplete = async (meetingId) => {
+    if (!window.confirm("Mark this meeting as completed?")) return;
+
+    try {
+      await axios.put(
+        `http://127.0.0.1:8000/api/Meeting/${meetingId}/status`,
+        { status: "completed" },
+        config
+      );
+      alert("Meeting marked as completed.");
+      fetchMeetings();
+    } catch (error) {
+      console.error("Status update error", error);
+      alert("Failed to update status.");
     }
   };
 
@@ -576,6 +604,10 @@ export default function MeetingsList() {
           background-color: #dc3545;
           color: white;
         }
+        .complete-btn{
+          background-color: green;
+          color: white;
+        }
         .reschedule-btn:hover {
           opacity: 0.7;
           background-color: #0d6efd;
@@ -583,6 +615,11 @@ export default function MeetingsList() {
         .cancel-btn:hover {
           opacity: 0.7;
           background-color: #dc3545;
+        }
+
+        .complete-btn:hover {
+          opacity: 0.7;
+          background-color: green;
         }
 
         /* Default Card */
@@ -966,7 +1003,11 @@ export default function MeetingsList() {
                         const existingStart = new Date(meeting.startsAt);
                         const existingEnd = new Date(meeting.endsAt);
 
-                        return newStart < existingEnd && newEnd > existingStart;
+                        return (
+                          newStart < existingEnd &&
+                          newEnd > existingStart &&
+                          newMeeting.id !== meeting.id
+                        );
                       }) && (
                         <p
                           style={{
@@ -987,7 +1028,9 @@ export default function MeetingsList() {
                         const existingEnd = new Date(meeting.endsAt);
 
                         const isConflict =
-                          newStart < existingEnd && newEnd > existingStart; // Time overlap check
+                          newStart < existingEnd &&
+                          newEnd > existingStart &&
+                          meeting.id !== newMeeting.id; // Time overlap check
 
                         return (
                           <div
@@ -1168,7 +1211,7 @@ export default function MeetingsList() {
                     </div>
 
                     {/* Search input */}
-                    <input
+                    <in
                       type="text"
                       placeholder="Search users..."
                       value={searchTerm}

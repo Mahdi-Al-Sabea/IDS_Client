@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { ToastContainer, toast } from 'react-toastify';
 
 
-const RoomsTable = () => {
+const RoomsTable = ({toggle,setToggle}) => {
   const [rooms, setRooms] = useState(null);
   const [searchParams, setSearchParams] = useState({
     roomname: "",
@@ -125,6 +125,11 @@ const RoomsTable = () => {
     fetchFeatures(); // Fetch features on component mount
     fetchRooms();
   }, [currentPage]); // refetch when page changes
+
+  useEffect(() => {
+    console.log("Toggle changed, refetching rooms");
+    fetchRooms();
+  }, [toggle]); // refetch when toggle changes
 
   if (!rooms) {
     return <div>Loading...</div>;

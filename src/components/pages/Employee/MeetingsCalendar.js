@@ -13,13 +13,17 @@ export default function MeetingsCalendar() {
   // Modal state
   const [selectedMeeting, setSelectedMeeting] = useState(null);
 
+  const token = localStorage.getItem("token");
   const config = {
     headers: {
-      Authorization: `Bearer YOUR_TOKEN_HERE`,
+      Authorization: `Bearer ${token}`,
     },
   };
 
   const fetchMeetings = async () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    console.log(user);
+    console.log(user.role);
     setError(null);
     try {
       setLoading(true);
@@ -27,11 +31,20 @@ export default function MeetingsCalendar() {
         "http://127.0.0.1:8000/api/User/Profile"
       );
       const id = profileRes.data.data.id;
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/User/${id}/meetings`,
-        config
-      );
-      setMeetings(res.data.data);
+
+      if (user.role === "Admin") {
+        const res = await axios.get(
+          `http://127.0.0.1:8000/api/Meeting`,
+          config
+        );
+        setMeetings(res.data.data);
+      } else {
+        const res = await axios.get(
+          `http://127.0.0.1:8000/api/User/${id}/meetings`,
+          config
+        );
+        setMeetings(res.data.data);
+      }
     } catch (err) {
       setError("Failed to fetch meetings.");
     } finally {

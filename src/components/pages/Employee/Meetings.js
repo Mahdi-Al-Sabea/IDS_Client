@@ -47,9 +47,13 @@ export default function MeetingsList() {
   const [selectedUsers, setSelectedUsers] = useState([]); // Store selected users
   const [userId, setUserId] = useState(null); // Store user ID
   const [currentMeetingId, setCurrentMeetingId] = useState(null); // null means it's a new meeting
-
+  const [searchFeature, setSearchFeature] = useState("");
+  const [meetingsByDate, setMeetingsByDate] = useState([]);
   const [step, setStep] = useState(1); // step 1 = date picker, step 2 = form
   const [selectedDate, setSelectedDate] = useState(null);
+  const [features, setFeatures] = useState([]);
+  const [selectedFeatures, setSelectedFeatures] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -97,6 +101,18 @@ export default function MeetingsList() {
         config
       ); // Make sure this endpoint returns all users
       setUsers(res.data.data); // Adjust if data structure is different
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    }
+  };
+
+  const fetchFeatures = async () => {
+    try {
+      const res = await axios.get(
+        "http://127.0.0.1:8000/api/FeatureNotPaginated",
+        config
+      ); // Make sure this endpoint returns all users
+      setFeatures(res.data.data); // Adjust if data structure is different
     } catch (error) {
       console.error("Failed to fetch users", error);
     }
@@ -217,6 +233,7 @@ export default function MeetingsList() {
     fetchMeetings();
     fetchUsers();
     fetchRooms();
+    fetchFeatures();
     setUserId(localStorage.getItem("id"));
   }, []);
 
@@ -250,7 +267,17 @@ export default function MeetingsList() {
     e.preventDefault();
     setFormError(null);
 
-    const attendees = newMeeting.attendees;
+    if (!newMeeting.attendees.includes(userId)) {
+      setNewMeeting({
+        ...newMeeting,
+        attendees: [...newMeeting.attendees, userId],
+      });
+    }
+
+    let attendees = [...newMeeting.attendees];
+    if (!attendees.includes(parseInt(userId))) {
+      attendees.push(parseInt(userId));
+    }
 
     const payload = {
       title: newMeeting.title,
@@ -344,6 +371,21 @@ export default function MeetingsList() {
 
   const { ongoing, upcoming, previous } = splitMeetings(meetings);
 
+  useEffect(() => {
+    if (newMeeting.room_id && newMeeting.startsAt) {
+      fetchMeetingByRoomandDate();
+    }
+  }, [newMeeting.room_id, newMeeting.startsAt]);
+
+  useEffect(() => {
+    const filtered = rooms.filter((room) => {
+      const roomfeaturesIds = room.features.map((item) => item.id);
+      return selectedFeatures.every((sf) => roomfeaturesIds.includes(sf));
+    });
+
+    setFilteredRooms(filtered);
+  }, [selectedFeatures, rooms]); // 👈 Trigger on mount AND when rooms or features change
+
   if (loading)
     return (
       <div
@@ -377,6 +419,25 @@ export default function MeetingsList() {
     );
 
   if (error) return <p style={{ padding: 20, color: "red" }}>{error}</p>;
+
+  const fetchMeetingByRoomandDate = async () => {
+    if (newMeeting.room_id != null && selectedDate != null) {
+      console.log("room : " + newMeeting.room_id);
+      console.log("date : " + selectedDate);
+      const selectedDatelocal = toDatetimeLocal(selectedDate).split("T")[0];
+      try {
+        const res = await axios.get(
+          `http://127.0.0.1:8000/api/MeetingByDate/${selectedDatelocal}/${newMeeting.room_id}`,
+          config
+        );
+        setMeetingsByDate(res.data.data); // Adjust if data structure is different
+        console.log(res.data.data);
+      } catch (error) {
+        console.error("Cancel error", error);
+        alert("Failed to fetch meetings.");
+      }
+    }
+  };
 
   return (
     <>
@@ -768,9 +829,13 @@ export default function MeetingsList() {
                   <input
                     type="datetime-local"
                     value={toDatetimeLocal(newMeeting.startsAt)}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, startsAt: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setNewMeeting({
+                        ...newMeeting,
+                        startsAt: e.target.value,
+                      });
+                      setSelectedDate(e.target.value);
+                    }}
                     required
                     style={{
                       padding: "0.75rem 1rem",
@@ -795,26 +860,181 @@ export default function MeetingsList() {
                     }}
                   />
 
-                  <label style={{ fontWeight: "bold" }}>Select Room:</label>
-                  <select
-                    value={newMeeting.room_id}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, room_id: e.target.value })
-                    }
+                  <label
                     style={{
-                      width: "100%",
-                      padding: "0.5rem",
-                      marginBottom: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
+                      fontWeight: "bold",
+                      display: "block",
+                      marginBottom: "0.5rem",
                     }}
                   >
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.roomname} (Capacity: {room.capacity})
-                      </option>
-                    ))}
-                  </select>
+                    Search by Feature:
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "0.5rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    {features.map((feature) => {
+                      const isSelected = selectedFeatures.includes(feature.id); // Use id to track selection
+
+                      return (
+                        <button
+                          type="button"
+                          key={feature.id}
+                          onClick={() => {
+                            setSelectedFeatures((prev) =>
+                              isSelected
+                                ? prev.filter((id) => id !== feature.id)
+                                : [...prev, feature.id]
+                            );
+                          }}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            borderRadius: "999px",
+                            border: "1px solid #ccc",
+                            backgroundColor: isSelected ? "#007bff" : "#f1f1f1",
+                            color: isSelected ? "#fff" : "#333",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {feature.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}
+                  >
+                    {filteredRooms.length === 0 ? (
+                      <p style={{ fontStyle: "italic", color: "#888" }}>
+                        ❌ No rooms match the selected features.
+                      </p>
+                    ) : (
+                      filteredRooms.map((room) => (
+                        <div
+                          key={room.id}
+                          onClick={() =>
+                            setNewMeeting({ ...newMeeting, room_id: room.id })
+                          }
+                          style={{
+                            flex: "1 1 calc(33.333% - 1rem)",
+                            cursor: "pointer",
+                            padding: "1rem",
+                            borderRadius: "8px",
+                            border:
+                              parseInt(newMeeting.room_id) === room.id
+                                ? "2px solid #0d6efd"
+                                : "1px solid #ccc",
+                            backgroundColor:
+                              parseInt(newMeeting.room_id) === room.id
+                                ? "#e7f1ff"
+                                : "#fff",
+                            transition: "0.3s ease",
+                          }}
+                        >
+                          <h6>{room.roomname}</h6>
+                          <p>Capacity: {room.capacity}</p>
+                          <ul
+                            style={{ paddingLeft: "1rem", fontSize: "0.9rem" }}
+                          >
+                            {room.features.map((f) => (
+                              <li key={f.id}>✅ {f.title}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {meetingsByDate && meetingsByDate.length > 0 && (
+                    <>
+                      <h6 style={{ marginBottom: "0.5rem" }}>
+                        Meetings on{" "}
+                        {new Date(newMeeting.startsAt).toLocaleDateString()} in{" "}
+                        {rooms.find(
+                          (r) => r.id === parseInt(newMeeting.room_id)
+                        )?.roomname ?? "Unknown Room"}
+                      </h6>
+
+                      {meetingsByDate.some((meeting) => {
+                        const newStart = new Date(newMeeting.startsAt);
+                        const newEnd = new Date(newMeeting.endsAt);
+                        const existingStart = new Date(meeting.startsAt);
+                        const existingEnd = new Date(meeting.endsAt);
+
+                        return newStart < existingEnd && newEnd > existingStart;
+                      }) && (
+                        <p
+                          style={{
+                            color: "red",
+                            fontSize: "0.85rem",
+                            marginBottom: "0.5rem",
+                          }}
+                        >
+                          ❌ You cannot reserve during the times below —
+                          conflict detected.
+                        </p>
+                      )}
+
+                      {meetingsByDate.map((meeting, index) => {
+                        const newStart = new Date(newMeeting.startsAt);
+                        const newEnd = new Date(newMeeting.endsAt);
+                        const existingStart = new Date(meeting.startsAt);
+                        const existingEnd = new Date(meeting.endsAt);
+
+                        const isConflict =
+                          newStart < existingEnd && newEnd > existingStart; // Time overlap check
+
+                        return (
+                          <div
+                            key={index}
+                            style={{
+                              backgroundColor: isConflict
+                                ? "#ffe6e6"
+                                : "#f1f1f1",
+                              padding: "0.75rem",
+                              borderRadius: "8px",
+                              marginBottom: "0.5rem",
+                              borderLeft: `3px solid ${
+                                isConflict ? "#dc3545" : "#0d6efd"
+                              }`,
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: "600",
+                                marginBottom: "0.25rem",
+                                color: isConflict ? "#b02a37" : "#333",
+                              }}
+                            >
+                              {meeting.title}
+                            </div>
+
+                            <div style={{ color: "#555" }}>
+                              🕒{" "}
+                              {new Date(meeting.startsAt).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}{" "}
+                              -{" "}
+                              {new Date(meeting.endsAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
 
                   <label style={{ fontWeight: "600", color: "#555" }}>
                     Agendas
@@ -903,46 +1123,48 @@ export default function MeetingsList() {
                         gap: "0.5rem",
                       }}
                     >
-                      {selectedUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          style={{
-                            backgroundColor: "#e0f0ff",
-                            padding: "0.3rem 0.75rem",
-                            borderRadius: "999px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                            fontSize: "0.95rem",
-                          }}
-                        >
-                          {user.name}
-                          <button
-                            onClick={() => {
-                              setSelectedUsers((prev) =>
-                                prev.filter((u) => u.id !== user.id)
-                              );
-                              setNewMeeting((prev) => ({
-                                ...prev,
-                                attendees: prev.attendees.filter(
-                                  (id) => id !== user.id
-                                ),
-                              }));
-                            }}
+                      {selectedUsers
+                        .filter((u) => u.id !== parseInt(userId))
+                        .map((user) => (
+                          <div
+                            key={user.id}
                             style={{
-                              background: "transparent",
-                              border: "none",
-                              color: "#0d6efd",
-                              fontWeight: "700",
-                              cursor: "pointer",
-                              fontSize: "1.2rem",
-                              lineHeight: "1",
+                              backgroundColor: "#e0f0ff",
+                              padding: "0.3rem 0.75rem",
+                              borderRadius: "999px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                              fontSize: "0.95rem",
                             }}
                           >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                            {user.name}
+                            <button
+                              onClick={() => {
+                                setSelectedUsers((prev) =>
+                                  prev.filter((u) => u.id !== user.id)
+                                );
+                                setNewMeeting((prev) => ({
+                                  ...prev,
+                                  attendees: prev.attendees.filter(
+                                    (id) => id !== user.id
+                                  ),
+                                }));
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#0d6efd",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                fontSize: "1.2rem",
+                                lineHeight: "1",
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                     </div>
 
                     {/* Search input */}
@@ -973,7 +1195,8 @@ export default function MeetingsList() {
                             user.name
                               .toLowerCase()
                               .includes(searchTerm.toLowerCase()) &&
-                            !selectedUsers.find((u) => u.id === user.id)
+                            !selectedUsers.find((u) => u.id === user.id) &&
+                            user.id !== parseInt(userId)
                         )
                         .map((user) => (
                           <div

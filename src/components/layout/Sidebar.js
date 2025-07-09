@@ -83,9 +83,9 @@ export default function Sidebar() {
               </li> */}
               <li className="nav-item">
                 <Link
-                  to="/dashboard"
+                  to="/dashboardAdmin"
                   className={`nav-link ${
-                    isActive("/dashboard") ? "bg-light text-dark" : "text-white"
+                    isActive("/dashboardAdmin") ? "bg-light text-dark" : "text-white"
                   } rounded px-3 py-2`}
                 >
                   Dashboard

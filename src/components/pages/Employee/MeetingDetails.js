@@ -32,6 +32,10 @@ export default function MeetingDetails() {
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1); // 1: select
   const [selectedDate, setSelectedDate] = useState("");
+  const [selectedFeatures, setSelectedFeatures] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [showAddActionItemForm, setShowAddActionItemForm] = useState(false);
+
   const [newMeeting, setNewMeeting] = useState({
     title: "",
     description: "",
@@ -39,15 +43,17 @@ export default function MeetingDetails() {
     endsAt: "",
     room_id: "",
     agendas: [{ description: "" }],
-    attendees: [], // updated from attendeesInput to an array
+    attendees: [],
   });
   const [selectedUsers, setSelectedUsers] = useState([]); // to store selected attendees
   const [rooms, setRooms] = useState([]);
   const [formError, setFormError] = useState("");
   const errorRef = React.useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [searchFeature, setSearchFeature] = useState("");
+  const [meetingsByDate, setMeetingsByDate] = useState([]);
   const [modalType, setModalType] = useState(null);
+  const [features, setFeatures] = useState([]);
   const [minutesData, setMinutesData] = useState({
     decisions: "",
     discussedPoints: "",
@@ -61,6 +67,14 @@ export default function MeetingDetails() {
   });
   const [agendas, setAgendas] = useState([]);
   const [users, setUsers] = useState([]);
+  useEffect(() => {
+    const filtered = rooms.filter((room) => {
+      const roomfeaturesIds = room.features.map((item) => item.id);
+      return selectedFeatures.every((sf) => roomfeaturesIds.includes(sf));
+    });
+
+    setFilteredRooms(filtered);
+  }, [selectedFeatures, rooms]); // 👈 Trigger on mount AND when rooms or features change
 
   const token = localStorage.getItem("token");
   async function fetchData() {
@@ -74,6 +88,7 @@ export default function MeetingDetails() {
 
       const fetchedMeeting = response.data.data;
       setMeeting(fetchedMeeting);
+      console.log(fetchedMeeting);
       setIsUserOrganizer(
         String(fetchedMeeting.organizer_id) === localStorage.getItem("id")
       );
@@ -94,10 +109,23 @@ export default function MeetingDetails() {
     headers: { Authorization: `Bearer ${token}` },
   };
 
+  const fetchFeatures = async () => {
+    try {
+      const res = await axios.get(
+        "http://127.0.0.1:8000/api/FeatureNotPaginated",
+        config
+      ); // Make sure this endpoint returns all users
+      setFeatures(res.data.data); // Adjust if data structure is different
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchUsers();
     fetchRooms();
+    fetchFeatures();
   }, []);
 
   const openModal = (type) => {
@@ -237,8 +265,13 @@ export default function MeetingDetails() {
       await axios.delete(`http://127.0.0.1:8000/api/Attachment/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("Attachment deleted.");
-      window.location.reload();
+      setNewMeeting((prev) => ({
+        ...prev,
+        minutes: {
+          ...prev.minutes,
+          attachments: prev.minutes.attachments.filter((att) => att.id !== id),
+        },
+      }));
     } catch (err) {
       alert("Failed to delete attachment.");
     }
@@ -321,6 +354,31 @@ export default function MeetingDetails() {
     }
   };
 
+  const fetchMeetingByRoomandDate = async () => {
+    if (newMeeting.room_id != null && selectedDate != null) {
+      console.log("room : " + newMeeting.room_id);
+      console.log("date : " + selectedDate);
+      const selectedDatelocal = toDatetimeLocal(selectedDate).split("T")[0];
+      try {
+        const res = await axios.get(
+          `http://127.0.0.1:8000/api/MeetingByDate/${selectedDatelocal}/${newMeeting.room_id}`,
+          config
+        );
+        setMeetingsByDate(res.data.data); // Adjust if data structure is different
+        console.log(res.data.data);
+      } catch (error) {
+        console.error("Cancel error", error);
+        alert("Failed to fetch meetings.");
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (newMeeting.room_id && newMeeting.startsAt) {
+      fetchMeetingByRoomandDate();
+    }
+  }, [newMeeting.room_id, newMeeting.startsAt]);
+
   const fetchRooms = async () => {
     try {
       const res = await axios.get(
@@ -345,14 +403,43 @@ export default function MeetingDetails() {
       startsAt: newMeeting.startsAt,
       endsAt: newMeeting.endsAt,
       room_id: newMeeting.room_id,
-      agendas: newMeeting.agendas,
-      attendees,
+      agendas: newMeeting.agendas.map((agenda) => ({
+        id: agenda.id,
+        description: agenda.description,
+      })),
+      attendees, // array of user IDs
+
+      minutes: {
+        id: newMeeting.minutes?.id,
+        discussedPoints: newMeeting.minutes?.discussedPoints,
+        decisions: newMeeting.minutes?.decisions,
+
+        action_items:
+          newMeeting.minutes?.action_items?.map((item) => ({
+            id: item.id,
+            description: item.description,
+            status: item.status,
+            assignee_id: item.assignee?.id, // backend will likely expect ID
+          })) || [],
+
+        attachments:
+          newMeeting.minutes?.attachments?.map((att) => ({
+            id: att.id,
+            fileName: att.fileName,
+            filePath: att.filePath,
+            uploader_id: att.uploader?.id, // same here
+          })) || [],
+      },
     };
 
     console.log("Creating meeting with payload:", payload);
 
     try {
-      await axios.put(`http://127.0.0.1:8000/api/Meeting/${id}`, payload, config);
+      await axios.put(
+        `http://127.0.0.1:8000/api/Meeting/${id}`,
+        payload,
+        config
+      );
       setShowModal(false);
       setNewMeeting({
         title: "",
@@ -384,17 +471,130 @@ export default function MeetingDetails() {
     );
   if (!meeting) return null;
 
+  const cardStyle = {
+    backgroundColor: "#fff",
+    borderRadius: "10px",
+    padding: "1.5rem",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  };
+
+  const headingStyle = {
+    fontSize: "1.25rem",
+    marginBottom: "1rem",
+    color: "blue",
+  };
+
+  const ulStyle = {
+    paddingLeft: "0",
+    listStyle: "none",
+  };
+
+  const liFlex = {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    marginBottom: "0.5rem",
+  };
+
+  const attachmentItemStyle = {
+    marginBottom: "1rem",
+    position: "relative",
+  };
+
+  const actionItemStyle = {
+    border : "1px solid grey",
+    padding : "8px",
+    borderRadius : "20px",
+    marginBottom: "1rem",
+  };
+
+  const imgStyle = {
+    maxWidth: "100%",
+    marginTop: "0.5rem",
+    borderRadius: "6px",
+  };
+
+  const yellowBtn = {
+    backgroundColor: "#ffc107",
+    border: "none",
+    color: "#fff",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+  };
+
+  const redBtn = {
+    backgroundColor: "#dc3545",
+    border: "none",
+    color: "#fff",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+  };
+
+  const editBtn = {
+    marginTop: "1rem",
+    backgroundColor: "#0d6efd",
+    color: "#fff",
+    border: "none",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+  };
+
+  const addBtn = {
+    marginTop: "1rem",
+    backgroundColor: "#28a745",
+    color: "#fff",
+    border: "none",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+  };
+
+  const deleteBtn = {
+    background: "transparent",
+    border: "none",
+    color: "red",
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+    marginLeft: "auto",
+    cursor: "pointer",
+  };
+
   return (
-    <div className="meeting-container">
-      <div className="meeting-sidebar">
-        {isUserOrganizer && (
-          <p style={{ color: "red", fontStyle: "italic" }}>
-            You are the organizer of this meeting.
-          </p>
-        )}
-        <div className="card">
-          <h3>{meeting.title}</h3>
-          <p>{meeting.description}</p>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
+        gap: "2rem",
+        padding: "2rem",
+        maxWidth: "1200px",
+        margin: "0 auto",
+      }}
+    >
+      {/* LEFT COLUMN */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        {/* General Info */}
+        <div className="card shadow" style={cardStyle}>
+          {isUserOrganizer && (
+            <p
+              style={{
+                color: "#b91c1c",
+                backgroundColor: "#ffe0e0",
+                fontStyle: "italic",
+                padding: "0.5rem 1rem",
+                borderRadius: "8px",
+                marginBottom: "1rem",
+              }}
+            >
+              You are the organizer of this meeting.
+            </p>
+          )}
+          <h2 style={{ ...headingStyle, marginBottom: "0.5rem" }}>
+            {meeting.title}
+          </h2>
+          <p style={{ marginBottom: "0.75rem" }}>{meeting.description}</p>
           <p>
             <strong>Status:</strong> {meeting.status}
           </p>
@@ -404,95 +604,57 @@ export default function MeetingDetails() {
           <p>
             <strong>Ends:</strong> {formatDateTime(meeting.endsAt)}
           </p>
+
+          {isUserOrganizer && (
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                marginTop: "1.5rem",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                style={yellowBtn}
+                onClick={() => handleReschedule(meeting)}
+              >
+                Reschedule
+              </button>
+              <button style={redBtn} onClick={() => handleCancel(meeting.id)}>
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="card">
-          <h3>Room</h3>
-          <p>
+        {/* Room */}
+        <div className="card shadow" style={cardStyle}>
+          <h3 style={headingStyle}>Room</h3>
+          <p style={{ fontSize: "1rem", color: "#444" }}>
             {meeting.room
-              ? `${meeting.room.roomname} - ${meeting.room.capacity}`
+              ? `${meeting.room.roomname} (Capacity: ${meeting.room.capacity})`
               : "No room assigned"}
           </p>
         </div>
 
-        <div className="card">
-          <h3>Attendees</h3>
-          <ul>
-            {selectedUsers.map((user) => (
-              <li
-                key={user.id}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
-                <FaUser />
-                {user.name} ({user.email})
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {isUserOrganizer && (
-          <div className="organizer-actions" style={{ display: "flex", gap: "0.5rem" }}>
-            <button
-              className="reschedule-btn"
-              style={{
-                backgroundColor: "#ffc107",
-                color: "#fff",
-                border: "none",
-                padding: "0.5rem 1rem",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleReschedule(meeting);
-              }}
-            >
-              Reschedule
-            </button>
-            <button
-              className="cancel-btn"
-              style={{
-                backgroundColor: "#dc3545",
-                color: "#fff",
-                border: "none",
-                padding: "0.5rem 1rem",
-                borderRadius: "4px",
-                cursor: "pointer",
-
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCancel(meeting.id);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="meeting-content">
-        <div className="card">
-          <h3>Agendas</h3>
-          <ul>
+        {/* Agendas */}
+        <div className="card shadow" style={cardStyle}>
+          <h3 style={headingStyle}>Agendas</h3>
+          <ul style={ulStyle}>
             {agendas.map((a, i) => (
-              <li
-                key={i}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
+              <li key={i} style={liFlex}>
                 <FaList /> {a.description}
               </li>
             ))}
           </ul>
-          {isUserOrganizer && (
-            <button onClick={() => openModal("agenda")}>
-              <FaEdit /> Edit Agendas
-            </button>
-          )}
         </div>
+      </div>
 
-        <div className="card">
-          <h3>Minutes</h3>
+      {/* RIGHT COLUMN */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        {/* Minutes */}
+        <div className="card shadow" style={cardStyle}>
+          <h3 style={headingStyle}>Minutes</h3>
           {meeting.minutes ? (
             <>
               <p>
@@ -503,98 +665,45 @@ export default function MeetingDetails() {
               </p>
             </>
           ) : (
-            <p>No minutes</p>
-          )}
-          {isUserOrganizer && (
-            <button onClick={() => openModal("minutes")}>
-              <FaEdit /> {meeting.minutes ? "Edit Minutes" : "Add Minutes"}
-            </button>
+            <p>No minutes available</p>
           )}
         </div>
 
-        <div className="card">
-          <h3>Attachments</h3>
-          <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
+        {/* Attachments */}
+        <div className="card shadow" style={cardStyle}>
+          <h3 style={headingStyle}>Attachments</h3>
+          <ul style={{ padding: 0, listStyle: "none", marginTop: "0.5rem" }}>
             {meeting.minutes?.attachments?.map((file) => {
               const fileUrl = `http://127.0.0.1:8000/${file.filePath}`;
-
               return (
-                <li
-                  key={file.id}
-                  style={{
-                    marginBottom: "1rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
+                <li key={file.id} style={attachmentItemStyle}>
+                  <div style={liFlex}>
                     <FaPaperclip /> {file.fileName}
                     {isUserOrganizer && (
                       <button
+                        style={deleteBtn}
                         onClick={() => handleDeleteAttachment(file.id)}
-                        style={{
-                          marginLeft: "auto",
-                          background: "transparent",
-                          border: "none",
-                          color: "red",
-                          fontWeight: "bold",
-                          fontSize: "1.2rem",
-                          cursor: "pointer",
-                        }}
                       >
                         ×
                       </button>
                     )}
                   </div>
                   {isImageFile(file.fileName) && (
-                    <img
-                      src={fileUrl}
-                      alt={file.fileName}
-                      style={{
-                        maxWidth: "200px",
-                        marginTop: "0.5rem",
-                        borderRadius: "6px",
-                      }}
-                    />
+                    <img src={fileUrl} alt={file.fileName} style={imgStyle} />
                   )}
                 </li>
               );
             })}
           </ul>
-
-          {isUserOrganizer && meeting.minutes && (
-            <button onClick={() => openModal("attachment")}>
-              <FaPlus /> Upload Attachment
-            </button>
-          )}
         </div>
-        <div className="card">
-          <h3>Action Items</h3>
-          <ul>
+
+        {/* Action Items */}
+        <div className="card shadow" style={cardStyle}>
+          <h3 style={headingStyle}>Action Items</h3>
+          <ul style={ulStyle}>
             {meeting.minutes?.action_items?.map((item) => (
-              <li
-                key={item.id}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.25rem",
-                  marginBottom: "1rem",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
+              <li key={item.id} style={actionItemStyle}>
+                <div style={liFlex}>
                   <FaCheckCircle
                     color={item.status === "Completed" ? "green" : "orange"}
                   />
@@ -602,34 +711,18 @@ export default function MeetingDetails() {
                   <span
                     style={{
                       marginLeft: "auto",
+                      fontSize: "0.85rem",
                       fontStyle: "italic",
-                      fontSize: "0.9rem",
                     }}
                   >
-                    Status: {item.status}
+                    {item.status}
                   </span>
-                  {isUserOrganizer && (
-                    <button
-                      onClick={() => handleDeleteActionItem(item.id)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "red",
-                        fontWeight: "bold",
-                        fontSize: "1.2rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
                 </div>
-
                 <div
                   style={{
+                    paddingLeft: "24px",
+                    color: "#666",
                     fontSize: "0.9rem",
-                    color: "#555",
-                    paddingLeft: "24px" /* to align under description */,
                   }}
                 >
                   Assigned to: {item.assignee?.name || "Unassigned"} | Due:{" "}
@@ -640,164 +733,8 @@ export default function MeetingDetails() {
               </li>
             ))}
           </ul>
-          {isUserOrganizer && meeting.minutes && (
-            <button onClick={() => openModal("actionItem")}>
-              <FaPlus /> Add Action Item
-            </button>
-          )}
         </div>
       </div>
-
-      {modalType === "agenda" && (
-        <Modal>
-          <h3>Edit Agendas</h3>
-          {agendas.map((agenda, index) => (
-            <div
-              key={index}
-              style={{ position: "relative", marginBottom: "1rem" }}
-              className="agenda-item-wrapper"
-            >
-              <textarea
-                value={agenda.description}
-                onChange={(e) => {
-                  const updated = [...agendas]; // copy array
-                  updated[index].description = e.target.value; // update description at current index
-                  setAgendas(updated); // save updated array to state
-                }}
-                rows={3}
-                style={{ width: "100%", paddingRight: "30px" }} // right padding to make space for the "×" button
-              />
-              <button
-                onClick={() => {
-                  // Remove agenda at index
-                  const filtered = agendas.filter((_, i) => i !== index);
-                  setAgendas(filtered);
-                }}
-                style={{
-                  position: "absolute",
-                  right: "5px",
-                  top: "5px",
-                  background: "transparent",
-                  border: "none",
-                  color: "red",
-                  fontWeight: "bold",
-                  fontSize: "1.2rem",
-                  cursor: "pointer",
-                  lineHeight: 1,
-                }}
-                aria-label={`Remove agenda ${index + 1}`}
-                title="Remove agenda"
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-
-          <button onClick={() => setAgendas([...agendas, { description: "" }])}>
-            <FaPlus /> Add Agenda
-          </button>
-          <button onClick={handleSaveAgendas}>
-            <FaCheckCircle /> Save
-          </button>
-        </Modal>
-      )}
-
-      {modalType === "minutes" && (
-        <Modal>
-          <h3>{meeting.minutes ? "Edit Minutes" : "Add Minutes"}</h3>
-          <textarea
-            autoFocus
-            placeholder="Decisions"
-            value={minutesData.decisions}
-            onChange={(e) =>
-              setMinutesData({ ...minutesData, decisions: e.target.value })
-            }
-            rows={3}
-          />
-          <textarea
-            autoFocus
-            placeholder="Discussed Points"
-            value={minutesData.discussedPoints}
-            onChange={(e) =>
-              setMinutesData({
-                ...minutesData,
-                discussedPoints: e.target.value,
-              })
-            }
-            rows={3}
-          />
-          <button onClick={handleSubmitMinutes}>
-            <FaCheckCircle /> Save
-          </button>
-        </Modal>
-      )}
-
-      {modalType === "attachment" && (
-        <Modal>
-          <h3>Upload Attachment</h3>
-          <input
-            type="file"
-            onChange={(e) => setAttachmentFile(e.target.files[0])}
-          />
-          <button onClick={handleUploadAttachment}>
-            <FaPaperclip /> Upload
-          </button>
-        </Modal>
-      )}
-
-      {modalType === "actionItem" && (
-        <Modal>
-          <h3>Add Action Item</h3>
-          <input
-            autoFocus
-            type="text"
-            placeholder="Description"
-            value={actionItemData.description}
-            onChange={(e) =>
-              setActionItemData({
-                ...actionItemData,
-                description: e.target.value,
-              })
-            }
-          />
-          <select
-            value={actionItemData.status}
-            onChange={(e) =>
-              setActionItemData({ ...actionItemData, status: e.target.value })
-            }
-          >
-            <option>Pending</option>
-            <option>Completed</option>
-          </select>
-          <input
-            type="date"
-            value={actionItemData.dueDate}
-            onChange={(e) =>
-              setActionItemData({ ...actionItemData, dueDate: e.target.value })
-            }
-          />
-          <select
-            value={actionItemData.assignedTo}
-            onChange={(e) =>
-              setActionItemData({
-                ...actionItemData,
-                assignedTo: e.target.value,
-              })
-            }
-          >
-            <option value="">Select Assignee</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-          <button onClick={handleAddActionItem}>
-            <FaPlus /> Add
-          </button>
-        </Modal>
-      )}
 
       {showModal && (
         <div
@@ -852,6 +789,7 @@ export default function MeetingDetails() {
               &times;
             </button>
 
+            {/* Step 1: Select Meeting Date */}
             {step === 1 && (
               <>
                 <h3
@@ -878,31 +816,60 @@ export default function MeetingDetails() {
                   }}
                 />
 
-                <button
-                  onClick={() => {
-                    const defaultStartTime = `${selectedDate}T09:00`;
-                    const defaultEndTime = `${selectedDate}T10:00`;
-                    setNewMeeting({
-                      ...newMeeting,
-                      startsAt: defaultStartTime,
-                      endsAt: defaultEndTime,
-                    });
-                    setStep(2);
-                  }}
-                  disabled={!selectedDate}
+                <div
                   style={{
-                    backgroundColor: "#0d6efd",
-                    color: "white",
-                    padding: "0.75rem 1.5rem",
-                    fontWeight: "600",
-                    borderRadius: "8px",
-                    border: "none",
-                    cursor: selectedDate ? "pointer" : "not-allowed",
-                    opacity: selectedDate ? 1 : 0.6,
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "1rem",
                   }}
                 >
-                  Continue to Form
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowModal(false);
+                      setStep(1);
+                      setSelectedDate(null);
+                    }}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      backgroundColor: "white",
+                      color: "#555",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (selectedDate) {
+                        const defaultStartTime = `${selectedDate}T09:00`;
+                        const defaultEndTime = `${selectedDate}T10:00`;
+                        setNewMeeting({
+                          ...newMeeting,
+                          startsAt: defaultStartTime,
+                          endsAt: defaultEndTime,
+                        });
+                        setStep(2);
+                      }
+                    }}
+                    disabled={!selectedDate}
+                    style={{
+                      backgroundColor: selectedDate ? "#0d6efd" : "#ccc",
+                      color: "white",
+                      padding: "0.75rem 1.5rem",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: selectedDate ? "pointer" : "not-allowed",
+                      opacity: selectedDate ? 1 : 0.6,
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
               </>
             )}
 
@@ -921,7 +888,6 @@ export default function MeetingDetails() {
 
                 {formError && (
                   <p
-                    ref={errorRef}
                     style={{
                       color: "red",
                       marginBottom: "1rem",
@@ -936,113 +902,226 @@ export default function MeetingDetails() {
                 )}
 
                 <form
-                  onSubmit={handleCreateMeeting}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setStep(3);
+                  }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: "1.25rem",
+                    gap: "1.5rem",
                   }}
                 >
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="Title"
-                    value={newMeeting.title}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, title: e.target.value })
-                    }
-                    required
+                  <div
                     style={{
-                      padding: "0.75rem 1rem",
-                      fontSize: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                    }}
-                  />
-
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    value={newMeeting.description}
-                    onChange={(e) =>
-                      setNewMeeting({
-                        ...newMeeting,
-                        description: e.target.value,
-                      })
-                    }
-                    required
-                    style={{
-                      padding: "0.75rem 1rem",
-                      fontSize: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                    }}
-                  />
-
-                  <input
-                    type="datetime-local"
-                    value={toDatetimeLocal(newMeeting.startsAt)}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, startsAt: e.target.value })
-                    }
-                    required
-                    style={{
-                      padding: "0.75rem 1rem",
-                      fontSize: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                    }}
-                  />
-
-                  <input
-                    type="datetime-local"
-                    value={toDatetimeLocal(newMeeting.endsAt)}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, endsAt: e.target.value })
-                    }
-                    required
-                    style={{
-                      padding: "0.75rem 1rem",
-                      fontSize: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                    }}
-                  />
-
-                  <label style={{ fontWeight: "bold" }}>Select Room:</label>
-                  <select
-                    value={newMeeting.room_id}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, room_id: e.target.value })
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "0.5rem",
-                      marginBottom: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
                     }}
                   >
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.roomname} (Capacity: {room.capacity})
-                      </option>
-                    ))}
-                  </select>
+                    <label
+                      htmlFor="meeting-title"
+                      style={{ fontWeight: "600", color: "#333" }}
+                    >
+                      Meeting Title
+                    </label>
+                    <input
+                      id="meeting-title"
+                      type="text"
+                      placeholder="e.g. Budget Review"
+                      value={newMeeting.title}
+                      onChange={(e) =>
+                        setNewMeeting({ ...newMeeting, title: e.target.value })
+                      }
+                      required
+                      style={{
+                        padding: "0.75rem 1rem",
+                        fontSize: "1rem",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                      }}
+                    />
+                  </div>
 
-                  <label style={{ fontWeight: "600", color: "#555" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <label
+                      htmlFor="meeting-description"
+                      style={{ fontWeight: "600", color: "#333" }}
+                    >
+                      Description
+                    </label>
+                    <input
+                      id="meeting-description"
+                      type="text"
+                      placeholder="e.g. Discussion on quarterly spending"
+                      value={newMeeting.description}
+                      onChange={(e) =>
+                        setNewMeeting({
+                          ...newMeeting,
+                          description: e.target.value,
+                        })
+                      }
+                      required
+                      style={{
+                        padding: "0.75rem 1rem",
+                        fontSize: "1rem",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <label
+                      htmlFor="start-time"
+                      style={{ fontWeight: "600", color: "#333" }}
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      id="start-time"
+                      type="datetime-local"
+                      value={toDatetimeLocal(newMeeting.startsAt)}
+                      onChange={(e) => {
+                        setNewMeeting({
+                          ...newMeeting,
+                          startsAt: e.target.value,
+                        });
+                        setSelectedDate(e.target.value.split("T")[0]);
+                      }}
+                      required
+                      style={{
+                        padding: "0.75rem 1rem",
+                        fontSize: "1rem",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <label
+                      htmlFor="end-time"
+                      style={{ fontWeight: "600", color: "#333" }}
+                    >
+                      End Time
+                    </label>
+                    <input
+                      id="end-time"
+                      type="datetime-local"
+                      value={toDatetimeLocal(newMeeting.endsAt)}
+                      onChange={(e) =>
+                        setNewMeeting({ ...newMeeting, endsAt: e.target.value })
+                      }
+                      required
+                      style={{
+                        padding: "0.75rem 1rem",
+                        fontSize: "1rem",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: "1rem",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      style={{
+                        padding: "0.7rem 1.5rem",
+                        fontWeight: "600",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                        backgroundColor: "white",
+                        color: "#555",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Back
+                    </button>
+
+                    <button
+                      type="submit"
+                      style={{
+                        padding: "0.7rem 1.5rem",
+                        fontWeight: "600",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor: "#0d6efd",
+                        color: "white",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <h3
+                  style={{
+                    marginBottom: "1.5rem",
+                    fontSize: "1.8rem",
+                    fontWeight: "700",
+                    color: "#0d6efd",
+                  }}
+                >
+                  Finalize Meeting Details
+                </h3>
+
+                {/* Agendas Section */}
+                <div style={{ marginBottom: "2rem" }}>
+                  <h4
+                    style={{
+                      marginBottom: "1rem",
+                      fontWeight: "600",
+                      color: "#333",
+                    }}
+                  >
                     Agendas
-                  </label>
+                  </h4>
                   {newMeeting.agendas.map((agenda, idx) => (
                     <div
                       key={idx}
                       style={{
                         display: "flex",
-                        gap: "0.5rem",
                         alignItems: "center",
+                        gap: "0.5rem",
+                        marginBottom: "0.75rem",
                       }}
                     >
+                      <label htmlFor={`agenda-${idx}`} className="sr-only">
+                        Agenda {idx + 1}
+                      </label>
                       <input
+                        id={`agenda-${idx}`}
                         type="text"
                         placeholder="Agenda description"
                         value={agenda.description}
@@ -1083,7 +1162,6 @@ export default function MeetingDetails() {
                     type="button"
                     onClick={addAgenda}
                     style={{
-                      alignSelf: "flex-start",
                       backgroundColor: "#0d6efd",
                       color: "white",
                       border: "none",
@@ -1091,181 +1169,650 @@ export default function MeetingDetails() {
                       padding: "0.5rem 1rem",
                       fontWeight: "600",
                       cursor: "pointer",
-                      marginTop: "-0.5rem",
-                      marginBottom: "1rem",
                     }}
                   >
                     + Add Agenda
                   </button>
+                </div>
+
+                {/* Meeting Members */}
+                <div style={{ marginBottom: "2rem" }}>
+                  <h4
+                    style={{
+                      marginBottom: "0.75rem",
+                      fontWeight: "600",
+                      color: "#333",
+                    }}
+                  >
+                    Meeting Members
+                  </h4>
+
+                  <label
+                    htmlFor="user-search"
+                    style={{
+                      fontWeight: "500",
+                      marginBottom: "0.25rem",
+                      display: "block",
+                    }}
+                  >
+                    Search and add users
+                  </label>
+                  <input
+                    id="user-search"
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.6rem 1rem",
+                      fontSize: "1rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      marginBottom: "0.75rem",
+                    }}
+                  />
 
                   <div
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.5rem",
+                      minHeight: "120px",
+                      maxHeight: "120px",
+                      overflowY: "auto",
+                      borderRadius: "8px",
+                      marginBottom: "1rem",
+                      border: "1px solid #ccc",
+                      backgroundColor: "#fff",
                     }}
                   >
-                    <label style={{ fontWeight: "bold" }}>
-                      Select Attendees:
-                    </label>
-
-                    {/* Selected users chips */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      {selectedUsers.map((user) => (
+                    {users
+                      .filter(
+                        (user) =>
+                          user.name
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase()) &&
+                          !selectedUsers.find((u) => u.id === user.id)
+                      )
+                      .map((user) => (
                         <div
                           key={user.id}
-                          style={{
-                            backgroundColor: "#e0f0ff",
-                            padding: "0.3rem 0.75rem",
-                            borderRadius: "999px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                            fontSize: "0.95rem",
+                          onClick={() => {
+                            setSelectedUsers((prev) => [...prev, user]);
+                            setNewMeeting((prev) => ({
+                              ...prev,
+                              attendees: [...prev.attendees, user.id],
+                            }));
+                            setSearchTerm("");
                           }}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            cursor: "pointer",
+                            borderBottom: "1px solid #eee",
+                            backgroundColor: "#f9f9f9",
+                            transition: "background-color 0.2s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#e6f0ff")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#f9f9f9")
+                          }
                         >
-                          {user.name}
-                          <button
-                            onClick={() => {
-                              setSelectedUsers((prev) =>
-                                prev.filter((u) => u.id !== user.id)
-                              );
-                              setNewMeeting((prev) => ({
-                                ...prev,
-                                attendees: prev.attendees.filter(
-                                  (id) => id !== user.id
-                                ),
-                              }));
-                            }}
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              color: "#0d6efd",
-                              fontWeight: "700",
-                              cursor: "pointer",
-                              fontSize: "1.2rem",
-                              lineHeight: "1",
-                            }}
-                          >
-                            ×
-                          </button>
+                          {user.name} ({user.email})
                         </div>
                       ))}
-                    </div>
-
-                    {/* Search input */}
-                    <input
-                      type="text"
-                      placeholder="Search users..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      style={{
-                        padding: "0.6rem 1rem",
-                        fontSize: "1rem",
-                        borderRadius: "8px",
-                        border: "1.5px solid #ccc",
-                      }}
-                    />
-
-                    {/* Filtered user dropdown */}
-                    <div
-                      style={{
-                        maxHeight: "120px",
-                        overflowY: "auto",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      {users
-                        .filter(
-                          (user) =>
-                            user.name
-                              .toLowerCase()
-                              .includes(searchTerm.toLowerCase()) &&
-                            !selectedUsers.find((u) => u.id === user.id)
-                        )
-                        .map((user) => (
-                          <div
-                            key={user.id}
-                            onClick={() => {
-                              setSelectedUsers((prev) => [...prev, user]);
-                              setNewMeeting((prev) => ({
-                                ...prev,
-                                attendees: [...prev.attendees, user.id],
-                              }));
-                              setSearchTerm("");
-                            }}
-                            style={{
-                              padding: "0.5rem 1rem",
-                              cursor: "pointer",
-                              borderBottom: "1px solid #eee",
-                              backgroundColor: "#f9f9f9",
-                              transition: "background-color 0.2s",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "#e6f0ff")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "#f9f9f9")
-                            }
-                          >
-                            {user.name} ({user.email})
-                          </div>
-                        ))}
-                    </div>
                   </div>
 
+                  {/* Selected users */}
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "flex-end",
-                      gap: "1rem",
-                      marginTop: "0.5rem",
+                      flexWrap: "wrap",
+                      gap: "0.6rem",
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowModal(false);
-                        setStep(1);
-                        setSelectedDate(null);
-                      }}
-                      style={{
-                        padding: "0.7rem 1.5rem",
-                        fontWeight: "600",
-                        borderRadius: "8px",
-                        border: "1.5px solid #ccc",
-                        backgroundColor: "white",
-                        color: "#555",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="submit"
-                      style={{
-                        padding: "0.7rem 1.5rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "none",
-                        backgroundColor: "#0d6efd",
-                        color: "white",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Update
-                    </button>
+                    {selectedUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        style={{
+                          backgroundColor: "#d6e4ff",
+                          padding: "0.4rem 1rem",
+                          borderRadius: "9999px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.6rem",
+                          fontSize: "1rem",
+                          color: "#1a3fbb",
+                          boxShadow: "0 1px 3px rgba(0, 49, 151, 0.3)",
+                          userSelect: "none",
+                        }}
+                        title={user.email}
+                      >
+                        <span>{user.name}</span>
+                        <button
+                          onClick={() => {
+                            setSelectedUsers((prev) =>
+                              prev.filter((u) => u.id !== user.id)
+                            );
+                            setNewMeeting((prev) => ({
+                              ...prev,
+                              attendees: prev.attendees.filter(
+                                (id) => id !== user.id
+                              ),
+                            }));
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#0d47a1",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            fontSize: "1.3rem",
+                            lineHeight: "1",
+                            padding: "0",
+                            borderRadius: "50%",
+                            width: "24px",
+                            height: "24px",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = "white";
+                            e.currentTarget.style.backgroundColor = "#0d47a1";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = "#0d47a1";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                          }}
+                          aria-label={`Remove ${user.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                </form>
+                </div>
+
+                {/* Footer Buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "1rem",
+                    marginTop: "1rem",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      backgroundColor: "white",
+                      color: "#555",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Back
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setStep(1);
+                      setSelectedDate(null);
+                    }}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      backgroundColor: "white",
+                      color: "#555",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCreateMeeting}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "700",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "#0d6efd",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Submit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "#0d6efd",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            )}
+
+            {step === 4 && (
+              <>
+                {/* Meeting Minutes */}
+                <div
+                  style={{
+                    backgroundColor: "#fff",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
+                    marginBottom: "2rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
+                  }}
+                >
+                  <h3
+                    style={{
+                      marginBottom: "0.5rem",
+                      color: "#0d6efd",
+                      fontWeight: "700",
+                    }}
+                  >
+                    Meeting Minutes
+                  </h3>
+
+                  <label
+                    htmlFor="decisions"
+                    style={{ fontWeight: "500", color: "#333" }}
+                  >
+                    Decisions
+                  </label>
+                  <textarea
+                    id="decisions"
+                    autoFocus
+                    placeholder="Write the decisions taken in the meeting..."
+                    value={newMeeting.minutes.decisions}
+                    onChange={(e) =>
+                      setNewMeeting((prev) => ({
+                        ...prev,
+                        minutes: {
+                          ...prev.minutes,
+                          decisions: e.target.value,
+                        },
+                      }))
+                    }
+                    rows={4}
+                    style={{
+                      resize: "vertical",
+                      padding: "0.75rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      fontSize: "1rem",
+                    }}
+                  />
+
+                  <label
+                    htmlFor="discussedPoints"
+                    style={{ fontWeight: "500", color: "#333" }}
+                  >
+                    Discussed Points
+                  </label>
+                  <textarea
+                    id="discussedPoints"
+                    placeholder="Mention discussed topics, challenges or outcomes..."
+                    value={newMeeting.minutes.discussedPoints}
+                    onChange={(e) =>
+                      setNewMeeting((prev) => ({
+                        ...prev,
+                        minutes: {
+                          ...prev.minutes,
+                          discussedPoints: e.target.value,
+                        },
+                      }))
+                    }
+                    rows={4}
+                    style={{
+                      resize: "vertical",
+                      padding: "0.75rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      fontSize: "1rem",
+                    }}
+                  />
+                </div>
+
+                {/* Upload Attachments */}
+                <div style={{ marginBottom: "2rem" }}>
+                  <h3
+                    style={{
+                      marginBottom: "0.75rem",
+                      color: "#0d6efd",
+                      fontWeight: "700",
+                    }}
+                  >
+                    Upload Attachments
+                  </h3>
+
+                  <ul
+                    style={{
+                      padding: 0,
+                      listStyle: "none",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    {newMeeting.minutes?.attachments?.map((file) => {
+                      const fileUrl = `http://127.0.0.1:8000/${file.filePath}`;
+                      return (
+                        <li key={file.id} style={attachmentItemStyle}>
+                          <div style={liFlex}>
+                            <FaPaperclip /> {file.fileName}
+                            {isUserOrganizer && (
+                              <button
+                                style={deleteBtn}
+                                onClick={() => handleDeleteAttachment(file.id)}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          {isImageFile(file.fileName) && (
+                            <img
+                              src={fileUrl}
+                              alt={file.fileName}
+                              style={imgStyle}
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <label
+                    htmlFor="fileUpload"
+                    style={{
+                      fontWeight: "500",
+                      marginBottom: "0.25rem",
+                      display: "block",
+                    }}
+                  >
+                    Choose File
+                  </label>
+                  <input
+                    id="fileUpload"
+                    type="file"
+                    onChange={(e) => setAttachmentFile(e.target.files[0])}
+                    style={{
+                      marginBottom: "0.75rem",
+                    }}
+                  />
+
+                  <button
+                    onClick={handleUploadAttachment}
+                    style={{
+                      backgroundColor: "#0d6efd",
+                      color: "white",
+                      border: "none",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FaPaperclip /> Upload
+                  </button>
+                </div>
+
+                {/* Manage Action Items */}
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <h3
+                    style={{
+                      fontSize: "1.8rem",
+                      fontWeight: "700",
+                      color: "#0d6efd",
+                    }}
+                  >
+                    Manage Action Items
+                  </h3>
+
+                  <div className="card shadow" style={cardStyle}>
+                    <h4 style={headingStyle}>Action Items</h4>
+                    <ul style={ulStyle}>
+                      {newMeeting.minutes?.action_items?.map((item) => (
+                        <li key={item.id} style={actionItemStyle}>
+                          <div style={liFlex}>
+                            <FaCheckCircle
+                              color={
+                                item.status === "Completed" ? "green" : "orange"
+                              }
+                            />
+                            <strong>{item.description}</strong>
+                            <span
+                              style={{
+                                marginLeft: "auto",
+                                fontSize: "0.85rem",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {item.status}
+                            </span>
+                            {isUserOrganizer && (
+                              <button
+                                style={deleteBtn}
+                                onClick={() => handleDeleteActionItem(item.id)}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              paddingLeft: "24px",
+                              color: "#666",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            Assigned to: {item.assignee?.name || "Unassigned"} |
+                            Due:{" "}
+                            {item.dueDate
+                              ? new Date(item.dueDate).toLocaleDateString()
+                              : "No due date"}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {isUserOrganizer && meeting.minutes && (
+                      <>
+                        <button
+                          style={addBtn}
+                          onClick={() => setShowAddActionItemForm(true)}
+                          disabled={showAddActionItemForm}
+                        >
+                          <FaPlus /> Add Action Item
+                        </button>
+
+                        {showAddActionItemForm && (
+                          <div
+                            style={{
+                              marginTop: "1rem",
+                              padding: "1rem",
+                              border: "1px solid #ccc",
+                              borderRadius: "8px",
+                              backgroundColor: "#f9f9f9",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.75rem",
+                            }}
+                          >
+                            <h4>Add Action Item</h4>
+
+                            <label>Description</label>
+                            <input
+                              autoFocus
+                              type="text"
+                              placeholder="e.g., Submit final report"
+                              value={actionItemData.description}
+                              onChange={(e) =>
+                                setActionItemData({
+                                  ...actionItemData,
+                                  description: e.target.value,
+                                })
+                              }
+                              style={{
+                                padding: "0.75rem 1rem",
+                                fontSize: "1rem",
+                                borderRadius: "8px",
+                                border: "1.5px solid #ccc",
+                                marginBottom: "1.5rem",
+                              }}
+                            />
+
+                            <label>Status</label>
+                            <select
+                              value={actionItemData.status}
+                              onChange={(e) =>
+                                setActionItemData({
+                                  ...actionItemData,
+                                  status: e.target.value,
+                                })
+                              }
+                              style={{
+                                padding: "0.75rem 1rem",
+                                fontSize: "1rem",
+                                borderRadius: "8px",
+                                border: "1.5px solid #ccc",
+                                marginBottom: "1.5rem",
+                              }}
+                            >
+                              <option>Pending</option>
+                              <option>Completed</option>
+                            </select>
+
+                            <label>Due Date</label>
+                            <input
+                              type="date"
+                              value={actionItemData.dueDate}
+                              onChange={(e) =>
+                                setActionItemData({
+                                  ...actionItemData,
+                                  dueDate: e.target.value,
+                                })
+                              }
+                              style={{
+                                padding: "0.75rem 1rem",
+                                fontSize: "1rem",
+                                borderRadius: "8px",
+                                border: "1.5px solid #ccc",
+                                marginBottom: "1.5rem",
+                              }}
+                            />
+
+                            <label>Assign To</label>
+                            <select
+                              value={actionItemData.assignedTo}
+                              onChange={(e) =>
+                                setActionItemData({
+                                  ...actionItemData,
+                                  assignedTo: e.target.value,
+                                })
+                              }
+                              style={{
+                                padding: "0.75rem 1rem",
+                                fontSize: "1rem",
+                                borderRadius: "8px",
+                                border: "1.5px solid #ccc",
+                                marginBottom: "1.5rem",
+                              }}
+                            >
+                              <option value="">Select Assignee</option>
+                              {users.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                  {user.name}
+                                </option>
+                              ))}
+                            </select>
+
+                            <div style={{ display: "flex", gap: "1rem" }}>
+                              <button
+                                onClick={handleAddActionItem}
+                                disabled={!actionItemData.description.trim()}
+                                style={{
+                                  backgroundColor: "#0d6efd",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  padding: "0.5rem 1rem",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <FaPlus /> Add
+                              </button>
+
+                              <button
+                                onClick={() => setShowAddActionItemForm(false)}
+                                style={{
+                                  backgroundColor: "#ccc",
+                                  color: "#333",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  padding: "0.5rem 1rem",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    style={{
+                      marginTop: "1.5rem",
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "600",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      backgroundColor: "white",
+                      color: "#555",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateMeeting}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      fontWeight: "700",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "#0d6efd",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Submit
+                  </button>
+                </div>
               </>
             )}
           </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import FloorPlan from "../FloorPlan";
+import { ToastContainer, toast } from "react-toastify";
 
 function formatDateTime(dateStr) {
   const options = {
@@ -295,7 +296,7 @@ export default function MeetingsList() {
 
     const payload = {
       title: newMeeting.title,
-      description: newMeeting.description, // Assuming description is same as title
+      description: newMeeting.description,
       startsAt: newMeeting.startsAt,
       endsAt: newMeeting.endsAt,
       room_id: newMeeting.room_id,
@@ -304,14 +305,27 @@ export default function MeetingsList() {
     };
 
     try {
+      let response;
       if (currentMeetingId) {
-        await axios.put(
+        response = await axios.put(
           `http://127.0.0.1:8000/api/Meeting/${currentMeetingId}`,
           payload,
           config
         );
+
+        // Replace the updated meeting in the state
+        setMeetings((prev) =>
+          prev.map((m) => (m.id === currentMeetingId ? response.data.data : m))
+        );
       } else {
-        await axios.post("http://127.0.0.1:8000/api/Meeting", payload, config);
+        response = await axios.post(
+          "http://127.0.0.1:8000/api/Meeting",
+          payload,
+          config
+        );
+
+        // Add new meeting to the state
+        setMeetings((prev) => [...prev, response.data.data]);
       }
 
       setShowModal(false);
@@ -323,12 +337,15 @@ export default function MeetingsList() {
         agendas: [{ description: "" }],
         attendees: [],
       });
-      fetchMeetings();
+
       setCurrentMeetingId(null);
+      setSelectedDate(null);
+      setSelectedUsers([]);
+
+      toast.success("Meeting Created Successfully");
     } catch (err) {
-      if (err.response && err.response.data) {
-        if (err.response.data.message) setFormError(err.response.data.message);
-        else setFormError("Failed to create meeting.");
+      if (err.response?.data?.message) {
+        setFormError(err.response.data.message);
       } else {
         setFormError("Failed to create meeting.");
       }
@@ -681,6 +698,7 @@ export default function MeetingsList() {
       <button
         className="btn-primary"
         onClick={() => {
+          setStep(1);
           setShowModal(true);
           setCurrentMeetingId(null);
         }}
@@ -825,7 +843,9 @@ export default function MeetingsList() {
                 )}
 
                 <form
-                  onSubmit={handleCreateMeeting}
+                  onSubmit={(e) => {
+                    handleCreateMeeting(e);
+                  }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -1181,7 +1201,7 @@ export default function MeetingsList() {
                           alignItems: "center",
                           gap: "0.5rem",
                           fontSize: "0.95rem",
-                          minWidth : "70px"
+                          minWidth: "70px",
                         }}
                       >
                         You
@@ -1215,8 +1235,8 @@ export default function MeetingsList() {
                                 }));
                               }}
                               style={{
-                                margin : 0,
-                                padding : 0,
+                                margin: 0,
+                                padding: 0,
                                 background: "transparent",
                                 border: "none",
                                 color: "#0d6efd",
@@ -1387,6 +1407,7 @@ export default function MeetingsList() {
           )
         )}
       </section>
+      <ToastContainer />
     </>
   );
 }

@@ -10,6 +10,7 @@ import {
   FaPlus,
 } from "react-icons/fa";
 import "./MeetingDetails.css";
+import { toast, ToastContainer } from "react-toastify";
 function formatDateTime(dateStr) {
   if (!dateStr) return "";
   const options = {
@@ -516,6 +517,7 @@ export default function MeetingDetails() {
         agendas: [{ description: "" }],
         attendees: [],
       });
+      toast.success("Meeting Editted Successfully");
       fetchData();
     } catch (err) {
       console.log("Create meeting error", err);
@@ -655,6 +657,7 @@ export default function MeetingDetails() {
   };
 
   return (
+    <>
     <div
       style={{
         display: "grid",
@@ -872,7 +875,7 @@ export default function MeetingDetails() {
                 </li>
               );
             })}
-            {meeting?.minutes?.attachments?.length === 0 && (
+            {(!meeting.minutes || meeting?.minutes?.attachments?.length === 0) && (
               <i>No Attachments uploaded yet</i>
             )}
           </ul>
@@ -913,7 +916,7 @@ export default function MeetingDetails() {
                 </div>
               </li>
             ))}
-            {meeting.minutes?.action_items?.length === 0 && (
+            {(!meeting.minutes || meeting.minutes?.action_items?.length === 0) && (
               <i>No Action Items Assigned yet </i>
             )}
           </ul>
@@ -1925,6 +1928,8 @@ export default function MeetingDetails() {
         </div>
       )}
     </div>
+                <ToastContainer />
+</>
   );
 }
 

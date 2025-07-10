@@ -150,7 +150,6 @@
   margin-bottom: 2rem;
   padding: 1rem;
   background: #fdfdfd;
-  border-left: 4px solid #4c6ef5;
   border-radius: 10px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
 }
@@ -223,7 +222,6 @@
 .meeting-card-ui {
   background: #ffffff;
   border: 1px solid #e3e3e3;
-  border-left: 5px solid #4c6ef5;
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
@@ -386,13 +384,4 @@
 
 .meeting-card-ui:hover {
   transform: scale(1.02);
-}
-
-.meeting-upcoming {
-  border-left: 6px solid #4c6ef5; /* Blue */
-}
-
-.meeting-past {
-  border-left: 6px solid #adb5bd; /* Gray */
-  background-color: #f8f9fa;
 }

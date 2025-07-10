@@ -54,6 +54,8 @@ export default function MeetingDetails() {
   const [meetingsByDate, setMeetingsByDate] = useState([]);
   const [modalType, setModalType] = useState(null);
   const [features, setFeatures] = useState([]);
+  const [onGoing, setOnGoing] = useState(false);
+  const [past, setPast] = useState(false);
   const [minutesData, setMinutesData] = useState({
     decisions: "",
     discussedPoints: "",
@@ -88,6 +90,16 @@ export default function MeetingDetails() {
 
       const fetchedMeeting = response.data.data;
       setMeeting(fetchedMeeting);
+      const now = new Date();
+      const start = new Date(fetchedMeeting.startsAt);
+      const end = new Date(fetchedMeeting.endsAt);
+
+      if (start <= now && now < end) {
+        setOnGoing(true); // Meeting is currently happening
+      } else if (now >= end) {
+        setPast(true); // Meeting has ended
+      }
+
       console.log(fetchedMeeting);
       setIsUserOrganizer(
         String(fetchedMeeting.organizer_id) === localStorage.getItem("id")
@@ -327,9 +339,12 @@ export default function MeetingDetails() {
   }
 
   const handleReschedule = (meeting) => {
-    console.log("Rescheduling meeting:", meeting);
     setShowModal(true);
-    setStep(2);
+    if (onGoing || past) {
+      setStep(3);
+    } else {
+      setStep(2);
+    }
     setSelectedDate(meeting.startsAt.split("T")[0]);
 
     setNewMeeting({
@@ -462,13 +477,38 @@ export default function MeetingDetails() {
   };
 
   if (loading)
-    return <p style={{ textAlign: "center", marginTop: "2rem" }}>Loading...</p>;
-  if (error)
     return (
-      <p style={{ textAlign: "center", marginTop: "2rem", color: "red" }}>
-        {error}
-      </p>
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
     );
+
+  if (error) return <p style={{ padding: 20, color: "red" }}>{error}</p>;
   if (!meeting) return null;
 
   const cardStyle = {
@@ -502,9 +542,9 @@ export default function MeetingDetails() {
   };
 
   const actionItemStyle = {
-    border : "1px solid grey",
-    padding : "8px",
-    borderRadius : "20px",
+    border: "1px solid grey",
+    padding: "8px",
+    borderRadius: "20px",
     marginBottom: "1rem",
   };
 
@@ -618,7 +658,7 @@ export default function MeetingDetails() {
                 style={yellowBtn}
                 onClick={() => handleReschedule(meeting)}
               >
-                Reschedule
+                {onGoing || past ? "Edit" : "Reschedule"}
               </button>
               <button style={redBtn} onClick={() => handleCancel(meeting.id)}>
                 Cancel
@@ -648,6 +688,48 @@ export default function MeetingDetails() {
             ))}
           </ul>
         </div>
+
+        <div className="card shadow" style={cardStyle}>
+          <h3 style={headingStyle}>Attendees</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+            {meeting.attendees.map((user) => (
+              <div
+                key={user.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  backgroundColor: "#f8f9fa",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 5px rgba(0, 0, 0, 0.05)",
+                  width: "calc(50% - 0.5rem)", // two per row
+                }}
+              >
+                <img
+                  src={
+                    `http://127.0.0.1:8000/${user.profile_picture}` ||
+                    "https://via.placeholder.com/40"
+                  }
+                  alt={user.name}
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "1.5px solid #ddd",
+                  }}
+                />
+                <div>
+                  <strong>{user.name}</strong>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>
+                    {user.role || "Attendee"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* RIGHT COLUMN */}
@@ -665,7 +747,7 @@ export default function MeetingDetails() {
               </p>
             </>
           ) : (
-            <p>No minutes available</p>
+            <i>No minutes available</i>
           )}
         </div>
 
@@ -694,6 +776,9 @@ export default function MeetingDetails() {
                 </li>
               );
             })}
+            {meeting?.minutes?.attachments?.length === 0 && (
+              <i>No Attachments uploaded yet</i>
+            )}
           </ul>
         </div>
 
@@ -732,6 +817,9 @@ export default function MeetingDetails() {
                 </div>
               </li>
             ))}
+            {meeting.minutes?.action_items?.length === 0 && (
+              <i>No Action Items Assigned yet </i>
+            )}
           </ul>
         </div>
       </div>
@@ -1064,20 +1152,38 @@ export default function MeetingDetails() {
                       Back
                     </button>
 
-                    <button
-                      type="submit"
-                      style={{
-                        padding: "0.7rem 1.5rem",
-                        fontWeight: "600",
-                        borderRadius: "8px",
-                        border: "none",
-                        backgroundColor: "#0d6efd",
-                        color: "white",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Next
-                    </button>
+                    {!onGoing && !past ? (
+                      <button
+                        type="button"
+                        onClick={handleCreateMeeting}
+                        style={{
+                          padding: "0.7rem 1.5rem",
+                          fontWeight: "600",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: "#0d6efd",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Save
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        style={{
+                          padding: "0.7rem 1.5rem",
+                          fontWeight: "600",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: "#0d6efd",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Next
+                      </button>
+                    )}
                   </div>
                 </form>
               </>
@@ -1187,89 +1293,30 @@ export default function MeetingDetails() {
                     Meeting Members
                   </h4>
 
-                  <label
-                    htmlFor="user-search"
-                    style={{
-                      fontWeight: "500",
-                      marginBottom: "0.25rem",
-                      display: "block",
-                    }}
-                  >
-                    Search and add users
-                  </label>
-                  <input
-                    id="user-search"
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "0.6rem 1rem",
-                      fontSize: "1rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                      marginBottom: "0.75rem",
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      minHeight: "120px",
-                      maxHeight: "120px",
-                      overflowY: "auto",
-                      borderRadius: "8px",
-                      marginBottom: "1rem",
-                      border: "1px solid #ccc",
-                      backgroundColor: "#fff",
-                    }}
-                  >
-                    {users
-                      .filter(
-                        (user) =>
-                          user.name
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase()) &&
-                          !selectedUsers.find((u) => u.id === user.id)
-                      )
-                      .map((user) => (
-                        <div
-                          key={user.id}
-                          onClick={() => {
-                            setSelectedUsers((prev) => [...prev, user]);
-                            setNewMeeting((prev) => ({
-                              ...prev,
-                              attendees: [...prev.attendees, user.id],
-                            }));
-                            setSearchTerm("");
-                          }}
-                          style={{
-                            padding: "0.5rem 1rem",
-                            cursor: "pointer",
-                            borderBottom: "1px solid #eee",
-                            backgroundColor: "#f9f9f9",
-                            transition: "background-color 0.2s",
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#e6f0ff")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#f9f9f9")
-                          }
-                        >
-                          {user.name} ({user.email})
-                        </div>
-                      ))}
-                  </div>
-
                   {/* Selected users */}
                   <div
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
                       gap: "0.6rem",
+                      marginBottom: "20px",
                     }}
                   >
+                    <div
+                      key={"you"}
+                      style={{
+                        backgroundColor: "#d6e4ff",
+                        padding: "0.3rem 0.75rem",
+                        borderRadius: "999px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        fontSize: "0.95rem",
+                        minWidth: "70px",
+                      }}
+                    >
+                      You
+                    </div>
                     {selectedUsers.map((user) => (
                       <div
                         key={user.id}
@@ -1308,8 +1355,8 @@ export default function MeetingDetails() {
                             cursor: "pointer",
                             fontSize: "1.3rem",
                             lineHeight: "1",
-                            padding: "0",
-                            borderRadius: "50%",
+                            padding: 0,
+                            margin: 0,
                             width: "24px",
                             height: "24px",
                           }}
@@ -1329,6 +1376,96 @@ export default function MeetingDetails() {
                       </div>
                     ))}
                   </div>
+                  <input
+                    id="user-search"
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.6rem 1rem",
+                      fontSize: "1rem",
+                      borderRadius: "8px",
+                      border: "1.5px solid #ccc",
+                      marginBottom: "0.75rem",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      minHeight: "120px",
+                      maxHeight: "120px",
+                      overflowY: "auto",
+                      borderRadius: "8px",
+                      marginBottom: "1rem",
+                      border: "1px solid #ccc",
+                      backgroundColor: "#fff",
+                      padding: "0.5rem",
+                    }}
+                  >
+                    {users
+                      .filter(
+                        (user) =>
+                          user.name
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase()) &&
+                          !selectedUsers.find((u) => u.id === user.id)
+                      )
+                      .map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => {
+                            setSelectedUsers((prev) => [...prev, user]);
+                            setNewMeeting((prev) => ({
+                              ...prev,
+                              attendees: [...prev.attendees, user.id],
+                            }));
+                            setSearchTerm("");
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            padding: "0.5rem",
+                            borderBottom: "1px solid #eee",
+                            cursor: "pointer",
+                            backgroundColor: "#f9f9f9",
+                            borderRadius: "6px",
+                            transition: "background-color 0.2s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#e6f0ff")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "#f9f9f9")
+                          }
+                        >
+                          <img
+                            src={
+                              `http://127.0.0.1:8000/${user.profile_picture}` ||
+                              "https://via.placeholder.com/40"
+                            }
+                            alt={user.name}
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                              border: "1px solid #ccc",
+                            }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: "bold" }}>
+                              {user.name}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                              {user.email}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
 
                 {/* Footer Buttons */}
@@ -1340,22 +1477,23 @@ export default function MeetingDetails() {
                     marginTop: "1rem",
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    style={{
-                      padding: "0.7rem 1.5rem",
-                      fontWeight: "600",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                      backgroundColor: "white",
-                      color: "#555",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Back
-                  </button>
-
+                  {!onGoing && !past && (
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      style={{
+                        padding: "0.7rem 1.5rem",
+                        fontWeight: "600",
+                        borderRadius: "8px",
+                        border: "1.5px solid #ccc",
+                        backgroundColor: "white",
+                        color: "#555",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Back
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -1412,101 +1550,66 @@ export default function MeetingDetails() {
             )}
 
             {step === 4 && (
-              <>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2rem",
+                }}
+              >
                 {/* Meeting Minutes */}
-                <div
-                  style={{
-                    backgroundColor: "#fff",
-                    borderRadius: "12px",
-                    padding: "1.5rem",
-                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
-                    marginBottom: "2rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "1rem",
-                  }}
-                >
-                  <h3
-                    style={{
-                      marginBottom: "0.5rem",
-                      color: "#0d6efd",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Meeting Minutes
-                  </h3>
+                <section style={sectionStyle}>
+                  <h3 style={sectionHeading}>📝 Meeting Minutes</h3>
 
-                  <label
-                    htmlFor="decisions"
-                    style={{ fontWeight: "500", color: "#333" }}
-                  >
-                    Decisions
-                  </label>
-                  <textarea
-                    id="decisions"
-                    autoFocus
-                    placeholder="Write the decisions taken in the meeting..."
-                    value={newMeeting.minutes.decisions}
-                    onChange={(e) =>
-                      setNewMeeting((prev) => ({
-                        ...prev,
-                        minutes: {
-                          ...prev.minutes,
-                          decisions: e.target.value,
-                        },
-                      }))
-                    }
-                    rows={4}
-                    style={{
-                      resize: "vertical",
-                      padding: "0.75rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                      fontSize: "1rem",
-                    }}
-                  />
+                  <div style={formGroup}>
+                    <label htmlFor="decisions" style={labelStyle}>
+                      Decisions
+                    </label>
+                    <textarea
+                      id="decisions"
+                      autoFocus
+                      placeholder="Write the decisions taken in the meeting..."
+                      value={newMeeting.minutes.decisions}
+                      onChange={(e) =>
+                        setNewMeeting((prev) => ({
+                          ...prev,
+                          minutes: {
+                            ...prev.minutes,
+                            decisions: e.target.value,
+                          },
+                        }))
+                      }
+                      rows={4}
+                      style={textareaStyle}
+                    />
+                  </div>
 
-                  <label
-                    htmlFor="discussedPoints"
-                    style={{ fontWeight: "500", color: "#333" }}
-                  >
-                    Discussed Points
-                  </label>
-                  <textarea
-                    id="discussedPoints"
-                    placeholder="Mention discussed topics, challenges or outcomes..."
-                    value={newMeeting.minutes.discussedPoints}
-                    onChange={(e) =>
-                      setNewMeeting((prev) => ({
-                        ...prev,
-                        minutes: {
-                          ...prev.minutes,
-                          discussedPoints: e.target.value,
-                        },
-                      }))
-                    }
-                    rows={4}
-                    style={{
-                      resize: "vertical",
-                      padding: "0.75rem",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                      fontSize: "1rem",
-                    }}
-                  />
-                </div>
+                  <div style={formGroup}>
+                    <label htmlFor="discussedPoints" style={labelStyle}>
+                      Discussed Points
+                    </label>
+                    <textarea
+                      id="discussedPoints"
+                      placeholder="Mention discussed topics, challenges or outcomes..."
+                      value={newMeeting.minutes.discussedPoints}
+                      onChange={(e) =>
+                        setNewMeeting((prev) => ({
+                          ...prev,
+                          minutes: {
+                            ...prev.minutes,
+                            discussedPoints: e.target.value,
+                          },
+                        }))
+                      }
+                      rows={4}
+                      style={textareaStyle}
+                    />
+                  </div>
+                </section>
 
-                {/* Upload Attachments */}
-                <div style={{ marginBottom: "2rem" }}>
-                  <h3
-                    style={{
-                      marginBottom: "0.75rem",
-                      color: "#0d6efd",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Upload Attachments
-                  </h3>
+                {/* Attachments */}
+                <section style={sectionStyle}>
+                  <h3 style={sectionHeading}>Attachments</h3>
 
                   <ul
                     style={{
@@ -1542,129 +1645,75 @@ export default function MeetingDetails() {
                     })}
                   </ul>
 
-                  <label
-                    htmlFor="fileUpload"
-                    style={{
-                      fontWeight: "500",
-                      marginBottom: "0.25rem",
-                      display: "block",
-                    }}
-                  >
-                    Choose File
-                  </label>
-                  <input
-                    id="fileUpload"
-                    type="file"
-                    onChange={(e) => setAttachmentFile(e.target.files[0])}
-                    style={{
-                      marginBottom: "0.75rem",
-                    }}
-                  />
+                  <div style={formGroup}>
+                    <input
+                      type="file"
+                      onChange={(e) => setAttachmentFile(e.target.files[0])}
+                      style={{ marginBottom: "0.5rem" }}
+                    />
+                    <button onClick={handleUploadAttachment} style={primaryBtn}>
+                      <FaPaperclip /> Upload
+                    </button>
+                  </div>
+                </section>
 
-                  <button
-                    onClick={handleUploadAttachment}
-                    style={{
-                      backgroundColor: "#0d6efd",
-                      color: "white",
-                      border: "none",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FaPaperclip /> Upload
-                  </button>
-                </div>
+                {/* Action Items */}
+                <section style={sectionStyle}>
+                  <h3 style={sectionHeading}>Action Items</h3>
 
-                {/* Manage Action Items */}
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <h3
-                    style={{
-                      fontSize: "1.8rem",
-                      fontWeight: "700",
-                      color: "#0d6efd",
-                    }}
-                  >
-                    Manage Action Items
-                  </h3>
-
-                  <div className="card shadow" style={cardStyle}>
-                    <h4 style={headingStyle}>Action Items</h4>
-                    <ul style={ulStyle}>
-                      {newMeeting.minutes?.action_items?.map((item) => (
-                        <li key={item.id} style={actionItemStyle}>
-                          <div style={liFlex}>
-                            <FaCheckCircle
-                              color={
-                                item.status === "Completed" ? "green" : "orange"
-                              }
-                            />
-                            <strong>{item.description}</strong>
-                            <span
-                              style={{
-                                marginLeft: "auto",
-                                fontSize: "0.85rem",
-                                fontStyle: "italic",
-                              }}
+                  <ul style={ulStyle}>
+                    {newMeeting.minutes?.action_items?.map((item) => (
+                      <li key={item.id} style={actionItemStyle}>
+                        <div style={liFlex}>
+                          <FaCheckCircle
+                            color={
+                              item.status === "Completed" ? "green" : "orange"
+                            }
+                          />
+                          <strong>{item.description}</strong>
+                          <span style={statusStyle}>{item.status}</span>
+                          {isUserOrganizer && (
+                            <button
+                              style={deleteBtn}
+                              onClick={() => handleDeleteActionItem(item.id)}
                             >
-                              {item.status}
-                            </span>
-                            {isUserOrganizer && (
-                              <button
-                                style={deleteBtn}
-                                onClick={() => handleDeleteActionItem(item.id)}
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                          <div
-                            style={{
-                              paddingLeft: "24px",
-                              color: "#666",
-                              fontSize: "0.9rem",
-                            }}
+                              ×
+                            </button>
+                          )}
+                        </div>
+                        <div style={itemMetaStyle}>
+                          Assigned to: {item.assignee?.name || "Unassigned"} |
+                          Due:{" "}
+                          {item.dueDate
+                            ? new Date(item.dueDate).toLocaleDateString()
+                            : "No due date"}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {isUserOrganizer && meeting.minutes && (
+                    <>
+                      {!showAddActionItemForm && (
+                        <div style={formGroup}>
+                          <button
+                            onClick={() => setShowAddActionItemForm(true)}
+                            style={primaryBtn}
                           >
-                            Assigned to: {item.assignee?.name || "Unassigned"} |
-                            Due:{" "}
-                            {item.dueDate
-                              ? new Date(item.dueDate).toLocaleDateString()
-                              : "No due date"}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                            <FaPlus /> Add Action Item
+                          </button>
+                        </div>
+                      )}
 
-                    {isUserOrganizer && meeting.minutes && (
-                      <>
-                        <button
-                          style={addBtn}
-                          onClick={() => setShowAddActionItemForm(true)}
-                          disabled={showAddActionItemForm}
-                        >
-                          <FaPlus /> Add Action Item
-                        </button>
+                      {showAddActionItemForm && (
+                        <div style={formCard}>
+                          <h4>Add Action Item</h4>
 
-                        {showAddActionItemForm && (
-                          <div
-                            style={{
-                              marginTop: "1rem",
-                              padding: "1rem",
-                              border: "1px solid #ccc",
-                              borderRadius: "8px",
-                              backgroundColor: "#f9f9f9",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "0.75rem",
-                            }}
-                          >
-                            <h4>Add Action Item</h4>
-
+                          <div style={formGroup}>
                             <label>Description</label>
                             <input
                               autoFocus
                               type="text"
-                              placeholder="e.g., Submit final report"
                               value={actionItemData.description}
                               onChange={(e) =>
                                 setActionItemData({
@@ -1672,15 +1721,12 @@ export default function MeetingDetails() {
                                   description: e.target.value,
                                 })
                               }
-                              style={{
-                                padding: "0.75rem 1rem",
-                                fontSize: "1rem",
-                                borderRadius: "8px",
-                                border: "1.5px solid #ccc",
-                                marginBottom: "1.5rem",
-                              }}
+                              style={inputStyle}
+                              placeholder="e.g., Submit final report"
                             />
+                          </div>
 
+                          <div style={formGroup}>
                             <label>Status</label>
                             <select
                               value={actionItemData.status}
@@ -1690,18 +1736,14 @@ export default function MeetingDetails() {
                                   status: e.target.value,
                                 })
                               }
-                              style={{
-                                padding: "0.75rem 1rem",
-                                fontSize: "1rem",
-                                borderRadius: "8px",
-                                border: "1.5px solid #ccc",
-                                marginBottom: "1.5rem",
-                              }}
+                              style={inputStyle}
                             >
                               <option>Pending</option>
                               <option>Completed</option>
                             </select>
+                          </div>
 
+                          <div style={formGroup}>
                             <label>Due Date</label>
                             <input
                               type="date"
@@ -1712,15 +1754,11 @@ export default function MeetingDetails() {
                                   dueDate: e.target.value,
                                 })
                               }
-                              style={{
-                                padding: "0.75rem 1rem",
-                                fontSize: "1rem",
-                                borderRadius: "8px",
-                                border: "1.5px solid #ccc",
-                                marginBottom: "1.5rem",
-                              }}
+                              style={inputStyle}
                             />
+                          </div>
 
+                          <div style={formGroup}>
                             <label>Assign To</label>
                             <select
                               value={actionItemData.assignedTo}
@@ -1730,13 +1768,7 @@ export default function MeetingDetails() {
                                   assignedTo: e.target.value,
                                 })
                               }
-                              style={{
-                                padding: "0.75rem 1rem",
-                                fontSize: "1rem",
-                                borderRadius: "8px",
-                                border: "1.5px solid #ccc",
-                                marginBottom: "1.5rem",
-                              }}
+                              style={inputStyle}
                             >
                               <option value="">Select Assignee</option>
                               {users.map((user) => (
@@ -1745,75 +1777,53 @@ export default function MeetingDetails() {
                                 </option>
                               ))}
                             </select>
-
-                            <div style={{ display: "flex", gap: "1rem" }}>
-                              <button
-                                onClick={handleAddActionItem}
-                                disabled={!actionItemData.description.trim()}
-                                style={{
-                                  backgroundColor: "#0d6efd",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  padding: "0.5rem 1rem",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                <FaPlus /> Add
-                              </button>
-
-                              <button
-                                onClick={() => setShowAddActionItemForm(false)}
-                                style={{
-                                  backgroundColor: "#ccc",
-                                  color: "#333",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  padding: "0.5rem 1rem",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
                           </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+
+                          <div style={{ display: "flex", gap: "1rem" }}>
+                            <button
+                              onClick={handleAddActionItem}
+                              disabled={!actionItemData.description.trim()}
+                              style={primaryBtn}
+                            >
+                              <FaPlus /> Add
+                            </button>
+                            <button
+                              onClick={() => setShowAddActionItemForm(false)}
+                              style={secondaryBtn}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </section>
+
+                {/* Footer Buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: "2rem",
+                  }}
+                >
                   <button
                     type="button"
                     onClick={() => setStep(3)}
-                    style={{
-                      marginTop: "1.5rem",
-                      padding: "0.7rem 1.5rem",
-                      fontWeight: "600",
-                      borderRadius: "8px",
-                      border: "1.5px solid #ccc",
-                      backgroundColor: "white",
-                      color: "#555",
-                      cursor: "pointer",
-                    }}
+                    style={secondaryBtn}
                   >
                     Back
                   </button>
                   <button
                     type="button"
                     onClick={handleCreateMeeting}
-                    style={{
-                      padding: "0.7rem 1.5rem",
-                      fontWeight: "700",
-                      borderRadius: "8px",
-                      border: "none",
-                      backgroundColor: "#0d6efd",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
+                    style={primaryBtn}
                   >
                     Submit
                   </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1821,3 +1831,121 @@ export default function MeetingDetails() {
     </div>
   );
 }
+
+const sectionStyle = {
+  backgroundColor: "#fff",
+  borderRadius: "12px",
+  padding: "1.5rem",
+  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
+};
+
+const sectionHeading = {
+  color: "#0d6efd",
+  fontWeight: "700",
+  marginBottom: "1rem",
+};
+
+const formGroup = {
+  marginBottom: "1.25rem",
+  display: "flex",
+  flexDirection: "column",
+};
+
+const labelStyle = {
+  fontWeight: "500",
+  marginBottom: "0.5rem",
+};
+
+const inputStyle = {
+  padding: "0.75rem 1rem",
+  fontSize: "1rem",
+  borderRadius: "8px",
+  border: "1.5px solid #ccc",
+};
+
+const textareaStyle = {
+  ...inputStyle,
+  resize: "vertical",
+};
+
+const primaryBtn = {
+  backgroundColor: "#0d6efd",
+  color: "white",
+  border: "none",
+  padding: "0.6rem 1.2rem",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "600",
+};
+
+const secondaryBtn = {
+  backgroundColor: "#eaeaea",
+  color: "#333",
+  border: "none",
+  padding: "0.6rem 1.2rem",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "500",
+};
+
+const formCard = {
+  marginTop: "1rem",
+  padding: "1rem",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+  backgroundColor: "#f9f9f9",
+};
+
+const addBtn = {
+  ...primaryBtn,
+  marginTop: "1rem",
+};
+
+const deleteBtn = {
+  backgroundColor: "transparent",
+  color: "red",
+  border: "none",
+  marginLeft: "1rem",
+  cursor: "pointer",
+};
+
+const ulStyle = {
+  padding: 0,
+  listStyle: "none",
+  marginTop: "1rem",
+};
+
+const actionItemStyle = {
+  borderBottom: "1px solid #eee",
+  paddingBottom: "1rem",
+  marginBottom: "1rem",
+};
+
+const liFlex = {
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
+};
+
+const statusStyle = {
+  marginLeft: "auto",
+  fontSize: "0.85rem",
+  fontStyle: "italic",
+  color: "#555",
+};
+
+const itemMetaStyle = {
+  paddingLeft: "24px",
+  color: "#666",
+  fontSize: "0.9rem",
+};
+
+const attachmentItemStyle = {
+  marginBottom: "1rem",
+};
+
+const imgStyle = {
+  marginTop: "0.5rem",
+  maxWidth: "100%",
+  borderRadius: "8px",
+};

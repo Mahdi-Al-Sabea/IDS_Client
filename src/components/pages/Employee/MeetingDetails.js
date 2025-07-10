@@ -35,6 +35,9 @@ export default function MeetingDetails() {
   const [selectedFeatures, setSelectedFeatures] = useState([]);
   const [filteredRooms, setFilteredRooms] = useState([]);
   const [showAddActionItemForm, setShowAddActionItemForm] = useState(false);
+  const [isOn, setIsOn] = useState(false);
+
+  const toggle = () => setIsOn(!isOn);
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -119,6 +122,55 @@ export default function MeetingDetails() {
 
   const config = {
     headers: { Authorization: `Bearer ${token}` },
+  };
+
+  const handleToggle = async (id) => {
+    const updatedAttendees = meeting.attendees.map((attendee) =>
+      attendee.id === id
+        ? {
+            ...attendee,
+            pivot: {
+              ...attendee.pivot,
+              Attended: !attendee.pivot.Attended,
+            },
+          }
+        : attendee
+    );
+
+    // Update UI
+    setMeeting((prev) => ({
+      ...prev,
+      attendees: updatedAttendees,
+    }));
+
+    // Convert to Laravel's expected sync format
+    const attendeesPayload = {};
+    updatedAttendees.forEach((attendee) => {
+      attendeesPayload[attendee.id] = {
+        Attended: attendee.pivot.Attended,
+      };
+    });
+
+    try {
+      await axios.put(
+        `http://127.0.0.1:8000/api/Meeting/${meeting.id}`,
+        {
+          attendees: attendeesPayload,
+          room_id: meeting.room_id,
+          title: meeting.title,
+          description: meeting.description,
+          startsAt: meeting.startsAt,
+          endsAt: meeting.endsAt,
+          agendas,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Failed to handle participation status.");
+    }
   };
 
   const fetchFeatures = async () => {
@@ -694,37 +746,81 @@ export default function MeetingDetails() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
             {meeting.attendees.map((user) => (
               <div
-                key={user.id}
+                key={"i" + user.id}
                 style={{
                   display: "flex",
+                  justifyContent: "space-between",
                   alignItems: "center",
-                  gap: "0.75rem",
                   backgroundColor: "#f8f9fa",
                   padding: "0.75rem 1rem",
                   borderRadius: "8px",
                   boxShadow: "0 2px 5px rgba(0, 0, 0, 0.05)",
-                  width: "calc(50% - 0.5rem)", // two per row
+                  width: "100%",
                 }}
               >
-                <img
-                  src={
-                    `http://127.0.0.1:8000/${user.profile_picture}` ||
-                    "https://via.placeholder.com/40"
-                  }
-                  alt={user.name}
+                <div
+                  key={user.id}
                   style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "1.5px solid #ddd",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    backgroundColor: "#f8f9fa",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    width: "100%",
                   }}
-                />
+                >
+                  <img
+                    src={
+                      `http://127.0.0.1:8000/${user.profile_picture}` ||
+                      "https://via.placeholder.com/40"
+                    }
+                    alt={user.name}
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "1.5px solid #ddd",
+                    }}
+                  />
+                  <div>
+                    <strong>{user.name}</strong>
+                    <p
+                      style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}
+                    >
+                      {user.role || "Attendee"}
+                    </p>
+                  </div>
+                </div>
                 <div>
-                  <strong>{user.name}</strong>
-                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>
-                    {user.role || "Attendee"}
-                  </p>
+                  <form>
+                    <label style={switchStyle}>
+                      <input
+                        type="checkbox"
+                        checked={user.pivot.Attended}
+                        onChange={() => handleToggle(user.id)}
+                        style={{ display: "none" }}
+                      />
+                      <span
+                        style={{
+                          ...sliderStyle,
+                          backgroundColor: user.pivot.Attended
+                            ? "#0d6efd"
+                            : "#ccc",
+                        }}
+                      >
+                        <span
+                          style={{
+                            ...dotStyle,
+                            transform: user.pivot.Attended
+                              ? "translateX(22px)"
+                              : "translateX(2px)",
+                          }}
+                        />
+                      </span>
+                    </label>
+                  </form>
                 </div>
               </div>
             ))}
@@ -1948,4 +2044,30 @@ const imgStyle = {
   marginTop: "0.5rem",
   maxWidth: "100%",
   borderRadius: "8px",
+};
+
+const switchStyle = {
+  display: "flex",
+  alignItems: "center",
+  cursor: "pointer",
+};
+
+const sliderStyle = {
+  width: "50px",
+  height: "26px",
+  borderRadius: "15px",
+  backgroundColor: "#ccc",
+  position: "relative",
+  transition: "0.3s",
+};
+
+const dotStyle = {
+  position: "absolute",
+  top: "2px",
+  left: "2px",
+  width: "22px",
+  height: "22px",
+  borderRadius: "50%",
+  background: "#fff",
+  transition: "0.3s",
 };

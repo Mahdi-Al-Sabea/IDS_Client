@@ -134,6 +134,30 @@
   transform: translate(-50%, -50%) scale(0.95);
 }
 
+.floorplan-btn:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ffffff;
+  color: #0e0e0e;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 10;
+  
+}
+
 .card-header h4 {
   font-size: 1.3rem;
   font-weight: 600;

@@ -16,7 +16,7 @@ import MeetingDetails from "./components/pages/Employee/MeetingDetails";
 import MeetingsCalendar from "./components/pages/Employee/MeetingsCalendar";
 import EmployeeDashboard from "./components/pages/Employee/dashboardEmployee";
 import ActionItemsPage from "./components/pages/Employee/ActionItems";
-
+import { UserProvider } from "./hooks/UserContext";
 
 axios.interceptors.request.use((config) => {
   const token = JSON.parse(localStorage.getItem("token"));
@@ -53,37 +53,39 @@ const PrivateRoute = ({ children /* , allowedRoles */ }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <UserProvider>
+        <Router>
+          <Routes>
 
-        <Route path="/" element={<Navigate to="/signin" replace />} />
-        <Route path="/signin" element={<SignIn />} />
+          <Route path="/" element={<Navigate to="/signin" replace />} />
+          <Route path="/signin" element={<SignIn />} />
 
-        {/* Protected routes wrapped with Layout */}
-        <Route element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        }>
-          <Route path="/dashboardAdmin" element={<Dashboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/rooms" element={<Rooms />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/features" element={<Features />} />
-          <Route path="/meetings" element={<Meetings />} />
-          <Route path="/meeting/:id" element={<MeetingDetails />} />
-          <Route path="/dashboardEmployee" element={<EmployeeDashboard />} />
-          <Route path="/meetingCalendar" element={<MeetingsCalendar />} />
-          <Route path="/ActionItems" element={<ActionItemsPage />} />
-       
-          {/* Add more protected routes here */}
-
-
-        </Route>
-
+          {/* Protected routes wrapped with Layout */}
+          <Route element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }>
+            <Route path="/dashboardAdmin" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/rooms" element={<Rooms />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/meetings" element={<Meetings />} />
+            <Route path="/meeting/:id" element={<MeetingDetails />} />
+            <Route path="/dashboardEmployee" element={<EmployeeDashboard />} />
+            <Route path="/meetingCalendar" element={<MeetingsCalendar />} />
+            <Route path="/ActionItems" element={<ActionItemsPage />} />
         
-      </Routes>
-    </Router>
+            {/* Add more protected routes here */}
+
+
+          </Route>
+
+          
+        </Routes>
+      </Router>
+    </UserProvider>
   );
 }
 

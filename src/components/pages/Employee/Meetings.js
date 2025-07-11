@@ -693,7 +693,7 @@ export default function MeetingsList() {
 
       `}</style>
 
-      <FloorPlan></FloorPlan>
+      
 
       <button
         className="btn-primary"
@@ -726,7 +726,7 @@ export default function MeetingsList() {
               borderRadius: "16px",
               padding: "2.5rem 2rem",
               width: "100%",
-              maxWidth: "480px",
+              maxWidth: "80%",
               boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
               position: "relative",
               display: "flex",
@@ -921,6 +921,10 @@ export default function MeetingsList() {
                       border: "1.5px solid #ccc",
                     }}
                   />
+
+
+
+                    <FloorPlan meeting={newMeeting} setMeeting={setNewMeeting}></FloorPlan>
 
                   <label
                     style={{

@@ -2,8 +2,11 @@ import img from "../../assets/floorplan.jpg";
 import "./FloorPlan.css";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useUser } from "../../hooks/UserContext";
+import { ToastContainer, toast } from 'react-toastify';
 
-export default function FloorPlan({toggle, setToggle}) {
+export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
+  const { user } = useUser();
   const [floorRooms, setFloorRooms] = useState(null);
   const [currentFloor, setCurrentFloor] = useState(1);
   const totalFloors = 10; // set your actual total floors
@@ -23,6 +26,7 @@ export default function FloorPlan({toggle, setToggle}) {
         `http://127.0.0.1:8000/api/Room?floor=${floor}`
       );
       setFloorRooms(response.data.data.data);
+      console.log("Fetched floor rooms:", response.data.data.data);
     } catch (error) {
       console.error("Error fetching floor rooms:", error);
       setFloorRooms([]); // prevent infinite loading if error happens
@@ -30,6 +34,8 @@ export default function FloorPlan({toggle, setToggle}) {
   };
 
   useEffect(() => {
+    console.log(user.role);
+
     fetchFloorRooms(currentFloor);
   }, [currentFloor]);
 
@@ -40,6 +46,15 @@ export default function FloorPlan({toggle, setToggle}) {
 
   const handleClick = (roomId) => {
     console.log("Reserve room:", roomId);
+    if (user.role === "Employee") {
+      // Navigate to reservation flow or open modal
+      console.log("Navigating to reservation flow for room:", roomId);
+      // You can implement the logic to navigate to the reservation page or open a modal here
+      setMeeting({ ...meeting, room_id: roomId });
+      toast.success("Room selected successfully!");
+    } else {
+      console.log("Admin clicked on room:", roomId);
+    }
     // navigate to reservation flow or open modal
   };
 
@@ -47,9 +62,10 @@ export default function FloorPlan({toggle, setToggle}) {
 
   return (
     <div className="floorplan-wrapper container card shadow-lg ">
+      <ToastContainer />
       <div className="card-header text-center">
-        
-        <h4>🏢 Rooms Mapped to Floors</h4>
+        {user.role === "Admin" && <h4>🏢 Rooms Mapped to Floors</h4>}
+        {user.role === "Employee" && <h4>🏢 Select a room to book</h4>}
       </div>
 
       <div className="floorplan-image-container">
@@ -65,9 +81,34 @@ export default function FloorPlan({toggle, setToggle}) {
               key={room.id}
               className="floorplan-btn"
               style={{ top: pos.top, left: pos.left }}
-              onClick={() => handleClick(room.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                handleClick(room.id);
+              }}
             >
               {room.roomname || pos.label}
+              <span className="tooltip">
+                <div
+                  style={{
+                    flex: "1 1 calc(33.333% - 1rem)",
+                    cursor: "pointer",
+                    padding: "1rem",
+                    borderRadius: "8px",
+
+                    backgroundColor: "#fff",
+
+                    boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px",
+                  }}
+                >
+                  <h6>{room.roomname}</h6>
+                  <p>Capacity: {room.capacity}</p>
+                  <ul style={{ paddingLeft: "1rem", fontSize: "0.9rem" }}>
+                    {room.features.map((f) => (
+                      <li key={f.id}>✅ {f.title}</li>
+                    ))}
+                  </ul>
+                </div>
+              </span>
             </button>
           );
         })}
@@ -77,7 +118,10 @@ export default function FloorPlan({toggle, setToggle}) {
         <button
           className="btn btn-outline-primary"
           disabled={currentFloor <= -10}
-          onClick={() => setCurrentFloor((prev) => prev - 1)}
+          onClick={(e) => {
+            e.preventDefault();
+            setCurrentFloor((prev) => prev - 1);
+          }}
         >
           ⬅ Previous
         </button>
@@ -87,9 +131,10 @@ export default function FloorPlan({toggle, setToggle}) {
         <button
           className="btn btn-outline-primary"
           disabled={currentFloor >= totalFloors}
-          onClick={() =>
-            setCurrentFloor((prev) => Math.min(prev + 1, totalFloors))
-          }
+          onClick={(e) => {
+            e.preventDefault();
+            setCurrentFloor((prev) => Math.min(prev + 1, totalFloors));
+          }}
         >
           Next ➡
         </button>

@@ -4,9 +4,11 @@ import axios from 'axios';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useEffect } from 'react';
+import { useUser } from '../../hooks/UserContext';
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -17,15 +19,15 @@ export default function SignIn() {
       const expirationDate = new Date(tokenExp);
       if (expirationDate > new Date()) {
         if (user) {
-          if(user.role=="Employee"){
+          if(JSON.parse(user).role=="Employee"){
             navigate('/dashboardEmployee');
-          }else if(user.role==="Admin"){
+          }else if(JSON.parse(user).role==="Admin"){
             navigate('/dashboardAdmin');
           }
       }
       }
     }
-  });
+  }, []);
 
   // Yup validation schema
   const SignInSchema = Yup.object().shape({
@@ -42,7 +44,7 @@ export default function SignIn() {
 
     const response = res.data;
     const { token, user } = response.data;
-
+    setUser(user);
     const expiresInDays = 7;
     const expirationTimestamp = new Date();
     expirationTimestamp.setDate(expirationTimestamp.getDate() + expiresInDays);

@@ -251,29 +251,29 @@ export default function Sidebar() {
               <div className="modal-body">
                 <div className="list-group">
                   {notifications.length > 0 ? (
-                    notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className="list-group-item list-group-item-action"
-                      >
-                        <h6 className="mb-1">{notification.subject}</h6>
-                        <p className="mb-1">{notification.content}</p>
-                        <small className="text-muted">
-                          {new Date(notification.created_at).toLocaleString()}
-                        </small>
-                        <button
-                          className="btn btn-danger btn-sm float-end "
-                          onClick={() => deleteNotification(notification.id)}
-                        >
-                          Mark as read
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-muted">
-                      No notifications available.
-                    </div>
-                  )}
+  notifications // create a copy so original array isn't mutated
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .map((notification) => (
+      <div
+        key={notification.id}
+        className="list-group-item list-group-item-action"
+      >
+        <h6 className="mb-1">{notification.subject}</h6>
+        <p className="mb-1">{notification.content}</p>
+        <small className="text-muted mt-1">
+          {new Date(notification.created_at).toLocaleString()}
+        </small>
+        <button
+          className="btn btn-danger btn-sm float-end mb-2"
+          onClick={() => deleteNotification(notification.id)}
+        >
+          Mark as read
+        </button>
+      </div>
+    ))
+) : (
+  <div className="text-center text-muted">No notifications available.</div>
+)}
                 </div>
               </div>
             </div>

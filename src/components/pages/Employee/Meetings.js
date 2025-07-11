@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import FloorPlan from "../FloorPlan";
+import { ToastContainer, toast } from "react-toastify";
 
 function formatDateTime(dateStr) {
   const options = {
@@ -202,15 +203,18 @@ export default function MeetingsList() {
 
               {m.organizer_id == userId && type != "past" && (
                 <div className="organizer-actions">
-                  <button
-                    className="reschedule-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleReschedule(m);
-                    }}
-                  >
-                    Reschedule
-                  </button>
+                  {!m.isOngoing && (
+                    <button
+                      className="reschedule-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReschedule(m);
+                      }}
+                    >
+                      Reschedule
+                    </button>
+                  )}
+
                   <button
                     className="cancel-btn"
                     onClick={(e) => {
@@ -292,7 +296,7 @@ export default function MeetingsList() {
 
     const payload = {
       title: newMeeting.title,
-      description: newMeeting.description, // Assuming description is same as title
+      description: newMeeting.description,
       startsAt: newMeeting.startsAt,
       endsAt: newMeeting.endsAt,
       room_id: newMeeting.room_id,
@@ -301,14 +305,27 @@ export default function MeetingsList() {
     };
 
     try {
+      let response;
       if (currentMeetingId) {
-        await axios.put(
+        response = await axios.put(
           `http://127.0.0.1:8000/api/Meeting/${currentMeetingId}`,
           payload,
           config
         );
+
+        // Replace the updated meeting in the state
+        setMeetings((prev) =>
+          prev.map((m) => (m.id === currentMeetingId ? response.data.data : m))
+        );
       } else {
-        await axios.post("http://127.0.0.1:8000/api/Meeting", payload, config);
+        response = await axios.post(
+          "http://127.0.0.1:8000/api/Meeting",
+          payload,
+          config
+        );
+
+        // Add new meeting to the state
+        setMeetings((prev) => [...prev, response.data.data]);
       }
 
       setShowModal(false);
@@ -320,12 +337,15 @@ export default function MeetingsList() {
         agendas: [{ description: "" }],
         attendees: [],
       });
-      fetchMeetings();
+
       setCurrentMeetingId(null);
+      setSelectedDate(null);
+      setSelectedUsers([]);
+
+      toast.success("Meeting Created Successfully");
     } catch (err) {
-      if (err.response && err.response.data) {
-        if (err.response.data.message) setFormError(err.response.data.message);
-        else setFormError("Failed to create meeting.");
+      if (err.response?.data?.message) {
+        setFormError(err.response.data.message);
       } else {
         setFormError("Failed to create meeting.");
       }
@@ -560,7 +580,6 @@ export default function MeetingsList() {
           opacity: 0.5;
         }
         .ongoing-highlight {
-          border-left: 6px solid #198754;
           background-color: #e6f4ea;
         }
         .btn-primary {
@@ -584,43 +603,53 @@ export default function MeetingsList() {
           gap: 0.5rem;
           margin-top: 0.5rem;
         }
-
+        /* Common Button Styles */
         .reschedule-btn,
-        .cancel-btn {
+        .cancel-btn,
+        .complete-btn {
           padding: 0.4rem 0.75rem;
           border-radius: 6px;
           font-size: 0.85rem;
           font-weight: 600;
-          border: none;
+          border: 2px solid;
+          background-color: white;
           cursor: pointer;
+          transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* Specific Colors */
         .reschedule-btn {
+          color: #0d6efd;
+          border-color: #0d6efd;
+        }
+        .reschedule-btn:hover {
           background-color: #0d6efd;
           color: white;
+          transform: scale(1.05);
         }
 
         .cancel-btn {
-          background-color: #dc3545;
-          color: white;
-        }
-        .complete-btn{
-          background-color: green;
-          color: white;
-        }
-        .reschedule-btn:hover {
-          opacity: 0.7;
-          background-color: #0d6efd;
+          color: #dc3545;
+          border-color: #dc3545;
         }
         .cancel-btn:hover {
-          opacity: 0.7;
           background-color: #dc3545;
+          color: white;
+          transform: scale(1.05);
         }
 
-        .complete-btn:hover {
+        .complete-btn {
+          color: green;
+          border-color: green;
           opacity: 0.7;
-          background-color: green;
         }
+        .complete-btn:hover {
+          background-color: green;
+          color: white;
+          opacity: 1;
+          transform: scale(1.05);
+        }
+
 
         /* Default Card */
         .meeting-card-ui {
@@ -632,21 +661,14 @@ export default function MeetingsList() {
           transition: 0.3s ease;
         }
 
-        /* Upcoming */
-        .meeting-upcoming {
-          border-left: 6px solid #4c6ef5; /* Blue */
-        }
-
         /* Past */
         .meeting-past {
           background-color: #f1f3f5;
-          border-left: 6px solid #adb5bd; /* Gray */
         }
 
         /* Ongoing */
         .ongoing-highlight {
           background-color: #e6fcf5;
-          border-left: 6px solid #20c997; /* Green */
         }
 
         /* Ongoing Tag */
@@ -676,6 +698,7 @@ export default function MeetingsList() {
       <button
         className="btn-primary"
         onClick={() => {
+          setStep(1);
           setShowModal(true);
           setCurrentMeetingId(null);
         }}
@@ -820,7 +843,9 @@ export default function MeetingsList() {
                 )}
 
                 <form
-                  onSubmit={handleCreateMeeting}
+                  onSubmit={(e) => {
+                    handleCreateMeeting(e);
+                  }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -1166,6 +1191,21 @@ export default function MeetingsList() {
                         gap: "0.5rem",
                       }}
                     >
+                      <div
+                        key={"you"}
+                        style={{
+                          backgroundColor: "#d6e4ff",
+                          padding: "0.3rem 0.75rem",
+                          borderRadius: "999px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          fontSize: "0.95rem",
+                          minWidth: "70px",
+                        }}
+                      >
+                        You
+                      </div>
                       {selectedUsers
                         .filter((u) => u.id !== parseInt(userId))
                         .map((user) => (
@@ -1195,13 +1235,15 @@ export default function MeetingsList() {
                                 }));
                               }}
                               style={{
+                                margin: 0,
+                                padding: 0,
                                 background: "transparent",
                                 border: "none",
                                 color: "#0d6efd",
                                 fontWeight: "700",
                                 cursor: "pointer",
                                 fontSize: "1.2rem",
-                                lineHeight: "1",
+                                lineHeight: "0.7",
                               }}
                             >
                               ×
@@ -1211,7 +1253,7 @@ export default function MeetingsList() {
                     </div>
 
                     {/* Search input */}
-                    <in
+                    <input
                       type="text"
                       placeholder="Search users..."
                       value={searchTerm}
@@ -1325,7 +1367,7 @@ export default function MeetingsList() {
       )}
 
       <section className="meetings-section">
-        <h3 className="meetings-title" style={{ color: "#198754" }}>
+        <h3 className="meetings-title" style={{ color: "#0d6efd" }}>
           Ongoing Meetings
         </h3>
         {ongoing.length === 0 ? (
@@ -1353,7 +1395,7 @@ export default function MeetingsList() {
       </section>
 
       <section className="meetings-section">
-        <h3 className="meetings-title" style={{ color: "#6c757d" }}>
+        <h3 className="meetings-title" style={{ color: "#0d6efd" }}>
           Previous Meetings
         </h3>
         {previous.length === 0 ? (
@@ -1365,6 +1407,7 @@ export default function MeetingsList() {
           )
         )}
       </section>
+      <ToastContainer />
     </>
   );
 }

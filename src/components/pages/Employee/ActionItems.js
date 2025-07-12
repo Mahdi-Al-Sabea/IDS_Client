@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./ActionItems.css";
+import { toast, ToastContainer } from "react-toastify";
 
 const ActionItemsPage = () => {
   const [tasks, setTasks] = useState([]);
@@ -47,8 +48,9 @@ const ActionItemsPage = () => {
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
       );
+      toast.success("Task Status Changed Successfully");
     } catch (error) {
-      console.error("Error updating task:", error);
+      toast.error("Error updating task:", error);
     }
   };
 
@@ -84,41 +86,44 @@ const ActionItemsPage = () => {
       </div>
     );
   return (
-    <div className="action-items-container">
-      <h1>My Action Items</h1>
+    <>
+      <div className="action-items-container">
+        <h1>My Action Items</h1>
 
-      {tasks.length === 0 ? (
-        <p className="empty-message">No action items assigned.</p>
-      ) : (
-        <div className="task-cards">
-          {tasks.map((t) => (
-            <div
-              key={t.id}
-              className={`task-card ${
-                t.status === "Completed" ? "completed" : ""
-              }`}
-            >
-              <div className="task-card-body">
-                <h3>{t.description}</h3>
-                <p>
-                  <strong>Due:</strong>{" "}
-                  {new Date(t.dueDate).toLocaleDateString()}
-                </p>
-                <p>
-                  <strong>Assigned to:</strong> {t.assignee?.name} (
-                  {t.assignee?.email})
-                </p>
+        {tasks.length === 0 ? (
+          <p className="empty-message">No action items assigned.</p>
+        ) : (
+          <div className="task-cards">
+            {tasks.map((t) => (
+              <div
+                key={t.id}
+                className={`task-card ${
+                  t.status === "Completed" ? "completed" : ""
+                }`}
+              >
+                <div className="task-card-body">
+                  <h3>{t.description}</h3>
+                  <p>
+                    <strong>Due:</strong>{" "}
+                    {new Date(t.dueDate).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Assigned to:</strong> {t.assignee?.name} (
+                    {t.assignee?.email})
+                  </p>
+                </div>
+                <button className="toggle-btn" onClick={() => toggleTask(t)}>
+                  {t.status === "Completed"
+                    ? "Mark as Pending"
+                    : "Mark as Complete"}
+                </button>
               </div>
-              <button className="toggle-btn" onClick={() => toggleTask(t)}>
-                {t.status === "Completed"
-                  ? "Mark as Pending"
-                  : "Mark as Complete"}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <ToastContainer />
+    </>
   );
 };
 

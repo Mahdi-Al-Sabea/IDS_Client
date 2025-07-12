@@ -314,10 +314,11 @@ export default function MeetingsList() {
           config
         );
 
-        // Replace the updated meeting in the state
         setMeetings((prev) =>
           prev.map((m) => (m.id === currentMeetingId ? response.data.data : m))
         );
+        toast.success("Meeting Created Successfully");
+        console.log("hello");
       } else {
         response = await axios.post(
           "http://127.0.0.1:8000/api/Meeting",
@@ -325,8 +326,9 @@ export default function MeetingsList() {
           config
         );
 
-        // Add new meeting to the state
         setMeetings((prev) => [...prev, response.data.data]);
+        toast.success("Meeting Created Successfully");
+        console.log("hello");
       }
 
       setShowModal(false);
@@ -342,8 +344,6 @@ export default function MeetingsList() {
       setCurrentMeetingId(null);
       setSelectedDate(null);
       setSelectedUsers([]);
-
-      toast.success("Meeting Created Successfully");
     } catch (err) {
       if (err.response?.data?.message) {
         setFormError(err.response.data.message);
@@ -362,11 +362,11 @@ export default function MeetingsList() {
         `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
         config
       );
-      alert("Meeting cancelled.");
+      toast.success("Meeting cancelled.");
       fetchMeetings();
     } catch (error) {
       console.error("Cancel error", error);
-      alert("Failed to cancel meeting.");
+      toast.error("Failed to cancel meeting.");
     }
   };
 
@@ -379,11 +379,11 @@ export default function MeetingsList() {
         { status: "completed" },
         config
       );
-      alert("Meeting marked as completed.");
+      toast.success("Meeting marked as completed.");
       fetchMeetings();
     } catch (error) {
       console.error("Status update error", error);
-      alert("Failed to update status.");
+      toast.error("Failed to update status.");
     }
   };
 
@@ -483,7 +483,7 @@ export default function MeetingsList() {
         console.log(res.data.data);
       } catch (error) {
         console.error("Cancel error", error);
-        alert("Failed to fetch meetings.");
+        toast.error("Failed to fetch meetings.");
       }
     }
   };

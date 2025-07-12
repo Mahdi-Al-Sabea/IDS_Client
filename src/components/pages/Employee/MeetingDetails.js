@@ -1123,7 +1123,7 @@ export default function MeetingDetails() {
                       color: "#0d6efd",
                     }}
                   >
-                    Create New Meeting
+                    Edit Meeting
                   </h3>
 
                   {formError && (

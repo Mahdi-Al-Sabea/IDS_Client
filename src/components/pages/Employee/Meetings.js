@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import FloorPlan from "../FloorPlan";
 import { ToastContainer, toast } from "react-toastify";
+import dayjs from "dayjs";
 
 function formatDateTime(dateStr) {
   const options = {
@@ -297,8 +298,8 @@ export default function MeetingsList() {
     const payload = {
       title: newMeeting.title,
       description: newMeeting.description,
-      startsAt: newMeeting.startsAt,
-      endsAt: newMeeting.endsAt,
+      startsAt: dayjs(newMeeting.startsAt).format("YYYY-MM-DDTHH:mm"),
+      endsAt: dayjs(newMeeting.endsAt).format("YYYY-MM-DDTHH:mm"),
       room_id: newMeeting.room_id,
       agendas: newMeeting.agendas,
       attendees,
@@ -693,8 +694,6 @@ export default function MeetingsList() {
 
       `}</style>
 
-      
-
       <button
         className="btn-primary"
         onClick={() => {
@@ -922,9 +921,10 @@ export default function MeetingsList() {
                     }}
                   />
 
-
-
-                    <FloorPlan meeting={newMeeting} setMeeting={setNewMeeting}></FloorPlan>
+                  <FloorPlan
+                    meeting={newMeeting}
+                    setMeeting={setNewMeeting}
+                  ></FloorPlan>
 
                   <label
                     style={{

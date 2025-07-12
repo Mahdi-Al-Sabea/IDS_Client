@@ -12,6 +12,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.10.0",
+    "dayjs": "^1.11.13",
     "formik": "^2.4.6",
     "rc-slider": "^11.1.8",
     "react": "^19.1.0",

@@ -52,7 +52,7 @@ const EmployeeDashboard = () => {
 
     fetchData();
 
-    setUser(localStorage.getItem("user"));
+    setUser(JSON.parse(localStorage.getItem("user")));
   }, []);
 
   const pendingTasks = tasks.filter((t) => !t.status || t.status === "Pending");

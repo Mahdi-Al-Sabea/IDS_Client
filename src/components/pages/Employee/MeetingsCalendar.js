@@ -59,7 +59,6 @@ export default function MeetingsCalendar() {
   // Convert meetings to calendar events, title always "Meeting"
   const events = meetings.map((meeting) => ({
     id: meeting.id,
-    title: "Meeting", // show generic "Meeting"
     start: meeting.startsAt,
     end: meeting.endsAt,
   }));

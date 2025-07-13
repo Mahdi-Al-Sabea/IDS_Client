@@ -8,6 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 
 const RoomsTable = ({toggle,setToggle}) => {
   const [rooms, setRooms] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState({
     roomname: "",
     floor: "",
@@ -22,12 +23,15 @@ const RoomsTable = ({toggle,setToggle}) => {
 
     const fetchFeatures = async () => {
     try {
+      setLoading(true);
       const response = await axios.get("http://127.0.0.1:8000/api/Feature");
         console.log("Features fetched:", response.data.data);
       setFeatures(response.data.data.data);
     } catch (error) {
       console.error("Error fetching features:", error);
       toast.error("Failed to load features");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -131,8 +135,37 @@ const RoomsTable = ({toggle,setToggle}) => {
     fetchRooms();
   }, [toggle]); // refetch when toggle changes
 
-  if (!rooms) {
-    return <div>Loading...</div>;
+  if (loading ||!rooms) {
+     return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
   }
 
   return (

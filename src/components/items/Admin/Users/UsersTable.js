@@ -15,7 +15,7 @@ const UsersTable = ({toggle, setToggle}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5; // Number of users per page
   const [totalPages, setTotalPages] = useState(1);
-
+ const [loading, setLoading] = useState(false);
   //##################################################
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -106,6 +106,7 @@ const UsersTable = ({toggle, setToggle}) => {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const queryParams = {
         ...searchParams,
         page: currentPage,
@@ -122,6 +123,8 @@ const UsersTable = ({toggle, setToggle}) => {
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to fetch users. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -133,8 +136,37 @@ const UsersTable = ({toggle, setToggle}) => {
     fetchUsers();
   }, [toggle]); // refetch when toggle changes
 
-  if (!users) {
-    return <div>Loading...</div>;
+  if (loading || !users) {
+    return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
   }
 
   return (

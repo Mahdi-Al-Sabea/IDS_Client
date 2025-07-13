@@ -18,6 +18,7 @@ const FeaturesTable = ({toggle,setToggle}) => {
     title: "",
 
   });
+  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5; // Number of features per page
   const [totalPages, setTotalPages] = useState(1);
@@ -36,7 +37,6 @@ const FeaturesTable = ({toggle,setToggle}) => {
 
   const handleUpdate = async (values, { setErrors, setSubmitting }, featureId) => {
     try {
-      
 
       const response = await axios.put(
         `http://127.0.0.1:8000/api/Feature/${featureId}`,
@@ -89,6 +89,7 @@ const FeaturesTable = ({toggle,setToggle}) => {
 
   const fetchFeatures = async () => {
     try {
+      setLoading(true);
       const queryParams = {
         ...searchParams,
         page: currentPage,
@@ -105,6 +106,8 @@ const FeaturesTable = ({toggle,setToggle}) => {
     } catch (error) {
       console.error("Error fetching features:", error);
       toast.error("Failed to fetch features. Please try again later.");
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -112,8 +115,37 @@ const FeaturesTable = ({toggle,setToggle}) => {
     fetchFeatures();
   }, [currentPage]); // refetch when page changes
 
-  if (!features) {
-    return <div>Loading...</div>;
+  if (loading || !features) {
+        return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
   }
 
   return (

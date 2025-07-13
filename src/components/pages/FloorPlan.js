@@ -10,6 +10,7 @@ export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
   const [floorRooms, setFloorRooms] = useState(null);
   const [currentFloor, setCurrentFloor] = useState(1);
   const totalFloors = 10; // set your actual total floors
+  const [loading, setLoading] = useState(false);
 
   const roomsPositions = [
     { id: "1", label: "1", top: "19%", left: "61%" },
@@ -22,6 +23,7 @@ export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
 
   const fetchFloorRooms = async (floor) => {
     try {
+      setLoading(true);
       const response = await axios.get(
         `http://127.0.0.1:8000/api/Room?floor=${floor}`
       );
@@ -30,6 +32,8 @@ export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
     } catch (error) {
       console.error("Error fetching floor rooms:", error);
       setFloorRooms([]); // prevent infinite loading if error happens
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,7 +62,39 @@ export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
     // navigate to reservation flow or open modal
   };
 
-  if (!floorRooms) return <div>Loading...</div>;
+  if (loading || !floorRooms){
+        return (
+      <div
+        style={{
+          height: "100vh", // full viewport height
+          padding: "3rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #0d6efd",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <style>
+          {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+        </style>
+      </div>
+    );
+  }
+    
 
   return (
     <div className="floorplan-wrapper container card shadow-lg ">

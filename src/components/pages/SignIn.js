@@ -1,134 +1,106 @@
-import React, { use } from 'react';
-import { data, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
-import { useEffect } from 'react';
-import { useUser } from '../../hooks/UserContext';
-
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import axios from "axios";
+import { useUser } from "../../hooks/UserContext";
+import { FaEnvelope, FaLock } from "react-icons/fa";
+import "./SignIn.css";
 export default function SignIn() {
   const navigate = useNavigate();
   const { setUser } = useUser();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    const tokenExp = localStorage.getItem('token_exp');
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+    const tokenExp = localStorage.getItem("token_exp");
 
     if (token && user && tokenExp) {
-      const expirationDate = new Date(tokenExp);
-      if (expirationDate > new Date()) {
-        if (user) {
-          if(JSON.parse(user).role=="Employee"){
-            navigate('/dashboardEmployee');
-          }else if(JSON.parse(user).role==="Admin"){
-            navigate('/dashboardAdmin');
-          }
-      }
+      const expiration = new Date(tokenExp);
+      if (expiration > new Date()) {
+        const parsedUser = JSON.parse(user);
+        parsedUser?.role === "Admin"
+          ? navigate("/dashboardAdmin")
+          : navigate("/dashboardEmployee");
       }
     }
   }, []);
 
-  // Yup validation schema
   const SignInSchema = Yup.object().shape({
-    email: Yup.string().email('Invalid email format').required('Email is required'),
-    password: Yup.string().min(6, 'Minimum 6 characters').required('Password is required'),
+    email: Yup.string().email("Invalid email").required("Required"),
+    password: Yup.string().min(6, "Min 6 characters").required("Required"),
   });
 
   const handleSubmit = async (values, { setSubmitting, setErrors }) => {
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/login', {
-        email: values.email,
-        password: values.password,
-      });
+      const res = await axios.post("http://127.0.0.1:8000/api/login", values);
+      const { token, user } = res.data.data;
 
-    const response = res.data;
-    const { token, user } = response.data;
-    setUser(user);
-    const expiresInDays = 7;
-    const expirationTimestamp = new Date();
-    expirationTimestamp.setDate(expirationTimestamp.getDate() + expiresInDays);
+      setUser(user);
+      const exp = new Date();
+      exp.setDate(exp.getDate() + 7);
 
-    localStorage.setItem('token', JSON.stringify(token));
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('id', user.id);
-    localStorage.setItem('token_exp', expirationTimestamp.toISOString()); // Store full response data
+      localStorage.setItem("token", JSON.stringify(token));
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token_exp", exp.toISOString());
 
-    console.log('User data:', user); // Log user data to console
-    console.log('Token:', token); // Log token to console
-    console.log('Response:', response); // Log full response data to console
-
-      if(user.role === 'Employee' || user.role === 'Guest') {
-        navigate('/dashboardEmployee');
-      }else if(user.role === 'Admin') {
-        navigate('/dashboardAdmin');
-      }
-      
-    } catch (error) {
-      setErrors({ password: 'Invalid credentials' });
+      navigate(
+        user.role === "Admin" ? "/dashboardAdmin" : "/dashboardEmployee"
+      );
+    } catch (err) {
+      setErrors({ password: "Invalid email or password" });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="container d-flex justify-content-center align-items-center min-vh-100 bg-light">
-      <div className="card shadow-lg border-0 p-4" style={{ width: '100%', maxWidth: '420px' }}>
-        <h3 className="text-center mb-4">Welcome Back</h3>
-
-        <Formik
-          initialValues={{ email: '', password: '' }}
-          validationSchema={SignInSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ isSubmitting }) => (
-            <Form>
-              <div className="form-floating mb-3">
-                <Field
-                  type="email"
-                  name="email"
-                  id="floatingEmail"
-                  className="form-control"
-                  placeholder="Email"
-                />
-                <label htmlFor="floatingEmail">Email address</label>
-                <div className="text-danger small mt-1">
-                  <ErrorMessage name="email" />
+    <div className="login-page">
+      <div className="left-pane">
+        <h1>Welcome Back 👋</h1>
+        <p>Log in to manage your meetings and tasks efficiently.</p>
+      </div>
+      <div className="right-pane">
+        <div className="form-container">
+          <h2>Sign In</h2>
+          <Formik
+            initialValues={{ email: "", password: "" }}
+            validationSchema={SignInSchema}
+            onSubmit={handleSubmit}
+          >
+            {({ isSubmitting }) => (
+              <Form>
+                <div className="input-group">
+                  <FaEnvelope className="input-icon" />
+                  <Field type="email" name="email" placeholder="Email" />
                 </div>
-              </div>
+                <ErrorMessage name="email" component="div" className="error" />
 
-              <div className="form-floating mb-4">
-                <Field
-                  type="password"
+                <div className="input-group">
+                  <FaLock className="input-icon" />
+                  <Field
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                  />
+                </div>
+                <ErrorMessage
                   name="password"
-                  id="floatingPassword"
-                  className="form-control"
-                  placeholder="Password"
+                  component="div"
+                  className="error"
                 />
-                <label htmlFor="floatingPassword">Password</label>
-                <div className="text-danger small mt-1">
-                  <ErrorMessage name="password" />
-                </div>
-              </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary w-100 mb-2"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-outline-secondary w-100"
-                onClick={() => navigate('/signup')}
-              >
-                Forgot your password?
-              </button>
-            </Form>
-          )}
-        </Formik>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="submit-btn"
+                >
+                  {isSubmitting ? "Signing in..." : "Sign In"}
+                </button>
+              </Form>
+            )}
+          </Formik>
+        </div>
       </div>
     </div>
   );

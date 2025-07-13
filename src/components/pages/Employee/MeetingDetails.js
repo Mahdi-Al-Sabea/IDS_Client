@@ -8,6 +8,7 @@ import {
   FaPaperclip,
   FaCheckCircle,
   FaPlus,
+  FaFilePdf,
 } from "react-icons/fa";
 import "./MeetingDetails.css";
 import { toast, ToastContainer } from "react-toastify";
@@ -259,11 +260,10 @@ export default function MeetingDetails() {
       return;
     }
     if (
-  !actionItemData.description?.trim() ||
-  !actionItemData.dueDate ||
-  !actionItemData.assignedTo
-)
- {
+      !actionItemData.description?.trim() ||
+      !actionItemData.dueDate ||
+      !actionItemData.assignedTo
+    ) {
       toast.error("Fill all the fields please");
       return;
     }
@@ -319,7 +319,6 @@ export default function MeetingDetails() {
   }
 
   async function handleDeleteAttachment(id) {
-    
     try {
       await axios.delete(`http://127.0.0.1:8000/api/Attachment/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -341,7 +340,6 @@ export default function MeetingDetails() {
   }
 
   async function handleDeleteActionItem(id) {
-
     try {
       await axios.delete(`http://127.0.0.1:8000/api/ActionItem/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -855,6 +853,14 @@ export default function MeetingDetails() {
         >
           {/* Minutes */}
           <div className="card shadow" style={cardStyle}>
+            {past && meeting.minutes && (
+              <div style={{ textAlign: "center" }}>
+                <button className="btn btn-outline-danger">
+                  <FaFilePdf style={{ marginRight: "8px" }} />
+                  Download Minutes as PDF
+                </button>
+              </div>
+            )}
             <h3 style={headingStyle}>Minutes</h3>
             {meeting.minutes ? (
               <>
@@ -1996,7 +2002,7 @@ export default function MeetingDetails() {
 
                             <div style={{ display: "flex", gap: "1rem" }}>
                               <button
-                                onClick={()=>handleAddActionItem()}
+                                onClick={() => handleAddActionItem()}
                                 style={primaryBtn}
                               >
                                 <FaPlus /> Add

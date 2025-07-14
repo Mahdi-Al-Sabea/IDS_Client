@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import FloorPlan from "../FloorPlan";
 import { ToastContainer, toast } from "react-toastify";
 import dayjs from "dayjs";
+import { useUser } from "../../../hooks/UserContext";
 
 function formatDateTime(dateStr) {
   const options = {
@@ -38,6 +39,7 @@ function splitMeetings(meetings) {
 }
 
 export default function MeetingsList() {
+  const { user } = useUser();
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -250,7 +252,7 @@ export default function MeetingsList() {
     fetchUsers();
     fetchRooms();
     fetchFeatures();
-    setUserId(localStorage.getItem("id"));
+    setUserId(user.id); // Assuming user ID is available in the UserContext
   }, []);
 
   useEffect(() => {

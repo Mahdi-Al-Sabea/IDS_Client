@@ -15,11 +15,6 @@ import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
 import { useUser } from "../../../hooks/UserContext";
 
-
-
-
-
-
 function formatDateTime(dateStr) {
   if (!dateStr) return "";
   const options = {
@@ -91,34 +86,33 @@ export default function MeetingDetails() {
   });
   const [agendas, setAgendas] = useState([]);
   const [users, setUsers] = useState([]);
-  const [userId , setUserId] = useState(null);
+  const [userId, setUserId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     show: false,
     meetingId: null,
     state: "",
   });
 
-
-
-  const handleViewPDF = async ($id) => {
+  const handleViewPDF = async (id) => {
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/Minutes/generateReport/${id}`, {
-        responseType: 'blob',
-        headers: {
-          Accept: 'application/pdf',
-        },
-      });
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/Minutes/generateReport/${id}`,
+        {
+          responseType: "blob",
+          headers: {
+            Accept: "application/pdf",
+          },
+        }
+      );
 
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      window.open(url, '_blank');
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/pdf" })
+      );
+      window.open(url, "_blank");
     } catch (error) {
-      console.error('Error opening PDF:', error);
+      console.error("Error opening PDF:", error);
     }
   };
-
-
-
-
 
   useEffect(() => {
     const filtered = rooms.filter((room) => {
@@ -132,14 +126,13 @@ export default function MeetingDetails() {
   const token = localStorage.getItem("token");
   async function fetchData() {
     try {
-
       setLoading(true);
-            const profileRes = await axios.get(
-              "http://127.0.0.1:8000/api/User/Profile"
-            );
-            const id = profileRes.data.data.id;
-            console.log(id);
-            setUserId(id);
+      const profileRes = await axios.get(
+        "http://127.0.0.1:8000/api/User/Profile"
+      );
+      const id = profileRes.data.data.id;
+      console.log(id);
+      setUserId(id);
       const response = await axios.get(
         `http://127.0.0.1:8000/api/Meeting/${id}`,
         {
@@ -161,9 +154,7 @@ export default function MeetingDetails() {
 
       console.log(fetchedMeeting);
 
-      setIsUserOrganizer(
-        fetchedMeeting.organizer_id == user.id
-      );
+      setIsUserOrganizer(fetchedMeeting.organizer_id == user.id);
       setAgendas(fetchedMeeting.agendas || []);
       setMinutesData({
         decisions: fetchedMeeting.minutes?.decisions || "",
@@ -811,7 +802,10 @@ export default function MeetingDetails() {
                 >
                   {onGoing || past ? "Edit" : "Reschedule"}
                 </button>
-                <button style={redBtn} onClick={() => confirmCancel(meeting.id)}>
+                <button
+                  style={redBtn}
+                  onClick={() => confirmCancel(meeting.id)}
+                >
                   Cancel
                 </button>
               </div>
@@ -941,7 +935,10 @@ export default function MeetingDetails() {
           <div className="card shadow" style={cardStyle}>
             {past && meeting.minutes && (
               <div style={{ textAlign: "center" }}>
-                <button className="btn btn-outline-danger" onClick={() => handleViewPDF(meeting.minutes.id)}>
+                <button
+                  className="btn btn-outline-danger"
+                  onClick={() => handleViewPDF(meeting.minutes.id)}
+                >
                   <FaFilePdf style={{ marginRight: "8px" }} />
                   View or Download Minutes as PDF
                 </button>

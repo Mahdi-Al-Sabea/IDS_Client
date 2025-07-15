@@ -83,6 +83,12 @@ export default function MeetingDetails() {
   });
   const [agendas, setAgendas] = useState([]);
   const [users, setUsers] = useState([]);
+  const [userId , setUserId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    meetingId: null,
+    state: "",
+  });
   useEffect(() => {
     const filtered = rooms.filter((room) => {
       const roomfeaturesIds = room.features.map((item) => item.id);
@@ -95,6 +101,14 @@ export default function MeetingDetails() {
   const token = localStorage.getItem("token");
   async function fetchData() {
     try {
+
+      setLoading(true);
+            const profileRes = await axios.get(
+              "http://127.0.0.1:8000/api/User/Profile"
+            );
+            const id = profileRes.data.data.id;
+            console.log(id);
+            setUserId(id);
       const response = await axios.get(
         `http://127.0.0.1:8000/api/Meeting/${id}`,
         {
@@ -116,7 +130,7 @@ export default function MeetingDetails() {
 
       console.log(fetchedMeeting);
       setIsUserOrganizer(
-        String(fetchedMeeting.organizer_id) === localStorage.getItem("id")
+        String(fetchedMeeting.organizer_id) === userId
       );
       setAgendas(fetchedMeeting.agendas || []);
       setMinutesData({
@@ -365,23 +379,6 @@ export default function MeetingDetails() {
     return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
   };
 
-  const handleCancel = async (meetingId) => {
-    if (!window.confirm("Are you sure you want to cancel this meeting?"))
-      return;
-
-    try {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
-        config
-      );
-      toast.success("Meeting cancelled.");
-      Navigate("/meetings");
-    } catch (error) {
-      console.error("Cancel error", error);
-      toast.error("Failed to cancel meeting.");
-    }
-  };
-
   function toDatetimeLocal(dateStr) {
     const d = new Date(dateStr);
     const pad = (num) => num.toString().padStart(2, "0");
@@ -464,6 +461,45 @@ export default function MeetingDetails() {
     } catch (error) {
       console.error("Failed to fetch users", error);
     }
+  };
+
+  const confirmCancel = (id) => {
+    setConfirmModal({ show: true, meetingId: id, state: "cancelled" });
+  };
+
+  const handleCancel = async (meetingId) => {
+    try {
+      await axios.put(
+        `http://127.0.0.1:8000/api/Meeting/${confirmModal.meetingId}/status`,
+        { status: "cancelled" },
+        config
+      );
+      toast.success("Meeting marked as cancelled.");
+      setConfirmModal({ show: false, meetingId: null, state: "" });
+      setTimeout(() => Navigate("/meetings"));
+    } catch (error) {
+      console.error("Status update error", error);
+      toast.error("Failed to update status.");
+    }
+  };
+
+  const handleComplete = async () => {
+    try {
+      await axios.put(
+        `http://127.0.0.1:8000/api/Meeting/${confirmModal.meetingId}/status`,
+        { status: "completed" },
+        config
+      );
+      toast.success("Meeting marked as completed.");
+      setConfirmModal({ show: false, meetingId: null });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error("Status update error", error);
+      toast.error("Failed to update status.");
+    }
+  };
+  const confirmComplete = (id) => {
+    setConfirmModal({ show: true, meetingId: id, state: "complete" });
   };
 
   const handleCreateMeeting = async (e) => {
@@ -625,6 +661,15 @@ export default function MeetingDetails() {
     cursor: "pointer",
   };
 
+  const greenBtn = {
+    backgroundColor: "green",
+    border: "none",
+    color: "#fff",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+  };
+
   const redBtn = {
     backgroundColor: "#dc3545",
     border: "none",
@@ -719,13 +764,22 @@ export default function MeetingDetails() {
                   justifyContent: "flex-end",
                 }}
               >
+                {onGoing && (
+                  <button
+                    style={greenBtn}
+                    onClick={() => confirmComplete(meeting.id)}
+                  >
+                    {"Complete"}
+                  </button>
+                )}
+
                 <button
                   style={yellowBtn}
                   onClick={() => handleReschedule(meeting)}
                 >
                   {onGoing || past ? "Edit" : "Reschedule"}
                 </button>
-                <button style={redBtn} onClick={() => handleCancel(meeting.id)}>
+                <button style={redBtn} onClick={() => confirmCancel(meeting.id)}>
                   Cancel
                 </button>
               </div>
@@ -2049,6 +2103,53 @@ export default function MeetingDetails() {
           </div>
         )}
       </div>
+      {confirmModal.show && (
+        <div style={overlayStyle}>
+          <div style={modalStyle}>
+            <h4 style={{ marginBottom: "1rem" }}>
+              Mark Meeting as {confirmModal.state}?
+            </h4>
+            <p style={{ color: "#666", marginBottom: "1.5rem" }}>
+              Are you sure you want to mark this meeting as{" "}
+              <strong>{confirmModal.state}</strong>?
+            </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+              }}
+            >
+              <button
+                onClick={() =>
+                  setConfirmModal({ show: false, meetingId: null, state: "" })
+                }
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: "#e0e0e0",
+                  color: "#333",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={
+                  confirmModal.state === "complete"
+                    ? handleComplete
+                    : handleCancel
+                }
+                className={
+                  confirmModal.state === "complete"
+                    ? "complete-btn"
+                    : "cancel-btn"
+                }
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ToastContainer />
     </>
   );
@@ -2196,4 +2297,34 @@ const dotStyle = {
   borderRadius: "50%",
   background: "#fff",
   transition: "0.3s",
+};
+
+const overlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 1000,
+};
+
+const modalStyle = {
+  backgroundColor: "#fff",
+  borderRadius: "12px",
+  padding: "2rem",
+  width: "100%",
+  maxWidth: "400px",
+  boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2)",
+  animation: "fadeIn 0.3s ease",
+};
+
+const buttonStyle = {
+  padding: "0.5rem 1rem",
+  borderRadius: "6px",
+  border: "none",
+  cursor: "pointer",
 };

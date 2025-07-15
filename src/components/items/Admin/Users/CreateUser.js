@@ -4,14 +4,13 @@ import * as Yup from "yup";
 import axios from "axios";
 import { useState } from "react";
 import { useEffect } from "react";
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer, toast } from "react-toastify";
 
-const CreateUser = ({toggle, setToggle}) => {
-
-
-
-
-  const createUser = async (values, { setErrors, setSubmitting, resetForm }) => {
+const CreateUser = ({ toggle, setToggle }) => {
+  const createUser = async (
+    values,
+    { setErrors, setSubmitting, resetForm }
+  ) => {
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/api/User",
@@ -34,13 +33,13 @@ const CreateUser = ({toggle, setToggle}) => {
     }
   };
 
-   const initialValues = {
+  const initialValues = {
     name: "",
     email: "",
     role: "",
     password: "",
     password_confirmation: "",
-  }; 
+  };
 
   const validationSchema = Yup.object().shape({
     name: Yup.string().required("Name is required"),
@@ -58,96 +57,108 @@ const CreateUser = ({toggle, setToggle}) => {
 
   return (
     <>
-    <ToastContainer />
-    <div className="container mt-4">
-      <div className="card shadow-lg mb-4">
-        <div className="card-header text-center">
-          <h4>👤 Create New User</h4>
-        </div>
-        <div className="card-body">
-          <Formik
-            initialValues={initialValues}
-            validationSchema={validationSchema}
-            onSubmit={createUser}
-          >
-            {({ isSubmitting }) => (
-              <Form>
-                <div className="row g-3">
-                  {/* Full Name */}
-                  <div className="col-md-6">
-                    <label className="form-label">Full Name</label>
-                    <Field name="name" type="text" className="form-control" />
-                    <div className="text-danger">
-                      <ErrorMessage name="name" />
+      <ToastContainer />
+      <div className="container mt-4">
+        <div className="card shadow-lg mb-4">
+          <div className="card-header text-center">
+            <h4>👤 Create New User</h4>
+          </div>
+          <div className="card-body">
+            <Formik
+              initialValues={initialValues}
+              validationSchema={validationSchema}
+              onSubmit={createUser}
+            >
+              {({ isSubmitting }) => (
+                <Form>
+                  <div className="row g-3">
+                    {/* Full Name */}
+                    <div className="col-md-6">
+                      <label className="form-label">Full Name</label>
+                      <Field
+                        name="name"
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter full name"
+                      />
+                      <div className="text-danger">
+                        <ErrorMessage name="name" />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div className="col-md-6">
+                      <label className="form-label">Email</label>
+                      <Field
+                        name="email"
+                        type="email"
+                        className="form-control"
+                        placeholder="Enter email"
+                      />
+                      <div className="text-danger">
+                        <ErrorMessage name="email" />
+                      </div>
+                    </div>
+
+                    {/* Role */}
+                    <div className="col-md-6">
+                      <label className="form-label">Role</label>
+                      <Field name="role" as="select" className="form-select">
+                        <option value="">Select Role</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Employee">Employee</option>
+                        <option value="Guest">Guest</option>
+                      </Field>
+                      <div className="text-danger">
+                        <ErrorMessage name="role" />
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div className="col-md-6">
+                      <label className="form-label">Password</label>
+                      <Field
+                        name="password"
+                        type="password"
+                        className="form-control"
+                        placeholder="Enter password"
+                      />
+                      <div className="text-danger">
+                        <ErrorMessage name="password" />
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="col-md-6">
+                      <label className="form-label">Confirm Password</label>
+                      <Field
+                        name="password_confirmation"
+                        type="password"
+                        className="form-control"
+                        placeholder="Enter confirmation password"
+                      />
+                      <div className="text-danger">
+                        <ErrorMessage name="password_confirmation" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Email */}
-                  <div className="col-md-6">
-                    <label className="form-label">Email</label>
-                    <Field name="email" type="email" className="form-control" />
-                    <div className="text-danger">
-                      <ErrorMessage name="email" />
-                    </div>
+                  {/* Submit */}
+                  <div className="d-flex justify-content-center mt-4">
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-lg"
+                      disabled={isSubmitting}
+                    >
+                      Create User
+                    </button>
                   </div>
-
-                  {/* Role */}
-                  <div className="col-md-6">
-                    <label className="form-label">Role</label>
-                    <Field name="role" as="select" className="form-select">
-                      <option value="">Select Role</option>
-                      <option value="Admin">Admin</option>
-                      <option value="Employee">Employee</option>
-                      <option value="Guest">Guest</option>
-                    </Field>
-                    <div className="text-danger">
-                      <ErrorMessage name="role" />
-                    </div>
-                  </div>
-
-                  {/* Password */}
-                  <div className="col-md-6">
-                    <label className="form-label">Password</label>
-                    <Field
-                      name="password"
-                      type="password"
-                      className="form-control"
-                    />
-                    <div className="text-danger">
-                      <ErrorMessage name="password" />
-                    </div>
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div className="col-md-6">
-                    <label className="form-label">Confirm Password</label>
-                    <Field
-                      name="password_confirmation"
-                      type="password"
-                      className="form-control"
-                    />
-                    <div className="text-danger">
-                      <ErrorMessage name="password_confirmation" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Submit */}
-                <div className="d-flex justify-content-center mt-4">
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-lg"
-                    disabled={isSubmitting}
-                  >
-                    ➕ Create User
-                  </button>
-                </div>
-              </Form>
-            )}
-          </Formik>
+                </Form>
+              )}
+            </Formik>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 };

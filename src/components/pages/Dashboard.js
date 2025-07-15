@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaCalendarAlt, FaTasks, FaCheck } from "react-icons/fa";
 import "./dashboard.css";
-import MeetingsCalendar from './Employee/MeetingsCalendar';
+import MeetingsCalendar from "./Employee/MeetingsCalendar";
 
 const Dashboard = () => {
   const [meetings, setMeetings] = useState([]);
@@ -82,8 +82,12 @@ const Dashboard = () => {
         </style>
       </div>
     );
-  const renderMeetingsGroupedByDate = (meetingsList, type) => {
-    return meetings.slice(0, 1).map((m) => (
+
+  const renderSingleMeetingCard = (meetingsList, type) => {
+    const m = meetingsList[0]; // safely access first meeting
+    if (!m) return null;
+
+    return (
       <div
         key={m.id}
         className={`meeting-card-ui ${
@@ -94,7 +98,7 @@ const Dashboard = () => {
           <h3 className="meeting-title">{m.title}</h3>
           <span className={`status-chip ${m.status}`}>{m.status}</span>
         </div>
-
+        <p>{new Date(m.startsAt).toLocaleDateString()}</p>
         <div className="meeting-details">
           <p>
             <strong>🕒 Time:</strong>{" "}
@@ -113,7 +117,7 @@ const Dashboard = () => {
           </p>
         </div>
       </div>
-    ));
+    );
   };
 
   return (
@@ -147,7 +151,7 @@ const Dashboard = () => {
         {upcomingMeetings.length === 0 ? (
           <p className="empty-message">You have no upcoming meetings.</p>
         ) : (
-          renderMeetingsGroupedByDate(upcomingMeetings, "upcoming")
+          renderSingleMeetingCard(upcomingMeetings, "upcoming")
         )}
       </div>
 
@@ -156,7 +160,7 @@ const Dashboard = () => {
         {pastMeetings.length === 0 ? (
           <p className="empty-message">No completed meetings yet.</p>
         ) : (
-          renderMeetingsGroupedByDate(pastMeetings, "past")
+          renderSingleMeetingCard(pastMeetings, "past")
         )}
       </div>
       <MeetingsCalendar />

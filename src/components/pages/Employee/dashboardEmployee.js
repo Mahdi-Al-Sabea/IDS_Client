@@ -36,7 +36,7 @@ const EmployeeDashboard = () => {
           .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt)); // ascending
 
         const past = meetingsRes.data.data
-          .filter((m) => new Date(m.endsAt) < now)
+          .filter((m) => new Date(m.endsAt) < now || m.status === "completed")
           .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt)); // descending
 
         setUpcomingMeetings(upcoming);

@@ -4,13 +4,13 @@ import * as Yup from "yup";
 import axios from "axios";
 import { useState } from "react";
 import { useEffect } from "react";
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer, toast } from "react-toastify";
 
-const CreateFeature = ({toggle,setToggle}) => {
-
-
-
-  const createFeature = async (values, { setErrors, setSubmitting, resetForm }) => {
+const CreateFeature = ({ toggle, setToggle }) => {
+  const createFeature = async (
+    values,
+    { setErrors, setSubmitting, resetForm }
+  ) => {
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/api/Feature",
@@ -33,69 +33,80 @@ const CreateFeature = ({toggle,setToggle}) => {
     }
   };
 
-   const initialValues = {
+  const initialValues = {
     title: "",
     description: "",
   };
 
   const validationSchema = Yup.object().shape({
-    title: Yup.string().required("Title is required").max(255, "Title must be at most 255 characters"),
+    title: Yup.string()
+      .required("Title is required")
+      .max(255, "Title must be at most 255 characters"),
     description: Yup.string().required("Description is required"),
   });
 
   return (
     <>
-    <ToastContainer />
-    <div className="container mt-4">
-      <div className="card shadow-lg mb-4">
-        <div className="card-header text-center">
-          <h4>👤 Create New Feature</h4>
-        </div>
-        <div className="card-body">
-          <Formik
-            initialValues={initialValues}
-            validationSchema={validationSchema}
-            onSubmit={createFeature}
-          >
-            {({ isSubmitting }) => (
-              <Form>
-                <div className="row g-3">
-                  {/* Title */}
-                  <div className="col-md-6">
-                    <label className="form-label">Title</label>
-                    <Field name="title" type="text" className="form-control" />
-                    <div className="text-danger">
-                      <ErrorMessage name="title" />
+      <ToastContainer />
+      <div className="container mt-4">
+        <div className="card shadow-lg mb-4">
+          <div className="card-header text-center">
+            <h4>👤 Create New Feature</h4>
+          </div>
+          <div className="card-body">
+            <Formik
+              initialValues={initialValues}
+              validationSchema={validationSchema}
+              onSubmit={createFeature}
+            >
+              {({ isSubmitting }) => (
+                <Form>
+                  <div className="row g-3">
+                    {/* Title */}
+                    <div className="col-md-6">
+                      <label className="form-label">Title</label>
+                      <Field
+                        name="title"
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter feature title"
+                      />
+                      <div className="text-danger">
+                        <ErrorMessage name="title" />
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="col-md-6">
+                      <label className="form-label">Description</label>
+                      <Field
+                        name="description"
+                        as="textarea"
+                        className="form-control"
+                        placeholder="Enter feature description"
+                      />
+                      <div className="text-danger">
+                        <ErrorMessage name="description" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Description */}
-                  <div className="col-md-6">
-                    <label className="form-label">Description</label>
-                    <Field name="description" as="textarea" className="form-control" />
-                    <div className="text-danger">
-                      <ErrorMessage name="description" />
-                    </div>
+                  {/* Submit */}
+                  <div className="d-flex justify-content-center mt-4">
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-lg"
+                      disabled={isSubmitting}
+                    >
+                      Create Feature
+                    </button>
                   </div>
-
-                </div>
-
-                {/* Submit */}
-                <div className="d-flex justify-content-center mt-4">
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-lg"
-                    disabled={isSubmitting}
-                  >
-                    ➕ Create Feature
-                  </button>
-                </div>
-              </Form>
-            )}
-          </Formik>
+                </Form>
+              )}
+            </Formik>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 };

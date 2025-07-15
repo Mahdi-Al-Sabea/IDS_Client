@@ -33,6 +33,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
+    console.log(storedUser);
     try {
       const parsedUser = JSON.parse(storedUser);
       if (parsedUser) {
@@ -45,6 +46,15 @@ export default function Sidebar() {
       navigate("/signin");
     }
   }, [navigate]);
+
+  const markAllAsRead = async (userId) => {
+    try {
+      await axios.delete("http://127.0.0.1:8000/api/Notifications/markAllRead");
+      setNotifications([]);
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -67,11 +77,11 @@ export default function Sidebar() {
           <h5 className="mb-0">📝 Room Manager</h5>
         </div>
 
-      <nav className="flex-grow-1 p-3">
-        <ul className="nav flex-column gap-1">
-          {user.role === "Admin" && (
-            <>
-{/*               <li className="nav-item">
+        <nav className="flex-grow-1 p-3">
+          <ul className="nav flex-column gap-1">
+            {user.role === "Admin" && (
+              <>
+                {/*               <li className="nav-item">
                 <Link
                   to="/floorplan"
                   className={`nav-link ${
@@ -81,48 +91,52 @@ export default function Sidebar() {
                   Floor Plan
                 </Link>
               </li> */}
-              <li className="nav-item">
-                <Link
-                  to="/dashboardAdmin"
-                  className={`nav-link ${
-                    isActive("/dashboardAdmin") ? "bg-light text-dark" : "text-white"
-                  } rounded px-3 py-2`}
-                >
-                  Dashboard
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link
-                  to="/features"
-                  className={`nav-link ${
-                    isActive("/features") ? "bg-light text-dark" : "text-white"
-                  } rounded px-3 py-2`}
-                >
-                  Features
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link
-                  to="/rooms"
-                  className={`nav-link ${
-                    isActive("/rooms") ? "bg-light text-dark" : "text-white"
-                  } rounded px-3 py-2`}
-                >
-                  Rooms
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link
-                  to="/users"
-                  className={`nav-link ${
-                    isActive("/users") ? "bg-light text-dark" : "text-white"
-                  } rounded px-3 py-2`}
-                >
-                  Users
-                </Link>
-              </li>
-            </>
-          )}
+                <li className="nav-item">
+                  <Link
+                    to="/dashboardAdmin"
+                    className={`nav-link ${
+                      isActive("/dashboardAdmin")
+                        ? "bg-light text-dark"
+                        : "text-white"
+                    } rounded px-3 py-2`}
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/features"
+                    className={`nav-link ${
+                      isActive("/features")
+                        ? "bg-light text-dark"
+                        : "text-white"
+                    } rounded px-3 py-2`}
+                  >
+                    Features
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/rooms"
+                    className={`nav-link ${
+                      isActive("/rooms") ? "bg-light text-dark" : "text-white"
+                    } rounded px-3 py-2`}
+                  >
+                    Rooms
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/users"
+                    className={`nav-link ${
+                      isActive("/users") ? "bg-light text-dark" : "text-white"
+                    } rounded px-3 py-2`}
+                  >
+                    Users
+                  </Link>
+                </li>
+              </>
+            )}
 
             {(user.role === "Employee" || user.role === "Guest") && (
               <>
@@ -192,7 +206,6 @@ export default function Sidebar() {
                 )}
               </>
             )}
-
           </ul>
         </nav>
 
@@ -240,7 +253,7 @@ export default function Sidebar() {
         >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header">
+              <div className="modal-header d-flex justify-content-between align-items-center">
                 <h5 className="modal-title">🔔 Notifications</h5>
                 <button
                   type="button"
@@ -248,32 +261,48 @@ export default function Sidebar() {
                   onClick={() => setShowModal(false)}
                 ></button>
               </div>
+              <button
+                className="btn btn-sm btn-primary"
+                style={{
+                  background: "lightblue",
+                  color: "black",
+                }}
+                onClick={markAllAsRead}
+                disabled={notifications.length === 0}
+              >
+                Mark all as read
+              </button>
               <div className="modal-body">
                 <div className="list-group">
                   {notifications.length > 0 ? (
-  notifications // create a copy so original array isn't mutated
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .map((notification) => (
-      <div
-        key={notification.id}
-        className="list-group-item list-group-item-action"
-      >
-        <h6 className="mb-1">{notification.subject}</h6>
-        <p className="mb-1">{notification.content}</p>
-        <small className="text-muted mt-1">
-          {new Date(notification.created_at).toLocaleString()}
-        </small>
-        <button
-          className="btn btn-danger btn-sm float-end mb-2"
-          onClick={() => deleteNotification(notification.id)}
-        >
-          Mark as read
-        </button>
-      </div>
-    ))
-) : (
-  <div className="text-center text-muted">No notifications available.</div>
-)}
+                    notifications // create a copy so original array isn't mutated
+                      .sort(
+                        (a, b) =>
+                          new Date(b.created_at) - new Date(a.created_at)
+                      )
+                      .map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="list-group-item list-group-item-action"
+                        >
+                          <h6 className="mb-1">{notification.subject}</h6>
+                          <p className="mb-1">{notification.content}</p>
+                          <small className="text-muted mt-1">
+                            {new Date(notification.created_at).toLocaleString()}
+                          </small>
+                          <button
+                            className="btn btn-danger btn-sm float-end mb-2"
+                            onClick={() => deleteNotification(notification.id)}
+                          >
+                            Mark as read
+                          </button>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="text-center text-muted">
+                      No notifications available.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

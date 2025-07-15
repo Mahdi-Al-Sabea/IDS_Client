@@ -5,11 +5,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import img from "../../../../assets/floorplan.jpg";
-const CreateRoom = ({toggle,setToggle}) => {
-
-
-
-
+const CreateRoom = ({ toggle, setToggle }) => {
   const [features, setFeatures] = useState([]);
   const roomsPositions = [
     { id: "1", label: "1", top: "19%", left: "61%" },
@@ -19,7 +15,7 @@ const CreateRoom = ({toggle,setToggle}) => {
     { id: "5", label: "5", top: "75%", left: "24%" },
     { id: "6", label: "6", top: "81%", left: "46%" },
   ];
-    const handleClick = (roomId) => {
+  const handleClick = (roomId) => {
     console.log("Reserve room:", roomId);
     // navigate to reservation flow or open modal
   };
@@ -27,7 +23,7 @@ const CreateRoom = ({toggle,setToggle}) => {
   const fetchFeatures = async () => {
     try {
       const response = await axios.get("http://127.0.0.1:8000/api/Feature");
-        console.log("Features fetched:", response.data.data);
+      console.log("Features fetched:", response.data.data);
       setFeatures(response.data.data.data);
     } catch (error) {
       console.error("Error fetching features:", error);
@@ -57,16 +53,17 @@ const CreateRoom = ({toggle,setToggle}) => {
       .integer("Capacity must be an integer")
       .min(10, "Minimum capacity is 10")
       .max(1000, "Maximum capacity is 1000"),
-    features: Yup.array()
-      .of(Yup.number().integer())
-      .nullable(),
+    features: Yup.array().of(Yup.number().integer()).nullable(),
     position: Yup.number()
       .required("Position is required")
       .min(1, "Position must be at least 1")
       .max(6, "Position must be at most 6"),
   });
 
-  const createRoom = async (values, { setErrors, setSubmitting, resetForm }) => {
+  const createRoom = async (
+    values,
+    { setErrors, setSubmitting, resetForm }
+  ) => {
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/api/Room",
@@ -76,7 +73,6 @@ const CreateRoom = ({toggle,setToggle}) => {
       toast.success("Room created successfully");
       resetForm();
       setToggle(!toggle); // Toggle to refresh the rooms table
-
     } catch (error) {
       if (error.response?.data?.message === "Validation Error") {
         const errors = error.response.data.data;
@@ -101,9 +97,7 @@ const CreateRoom = ({toggle,setToggle}) => {
             <h4>🏨 Create New Room</h4>
           </div>
           <div className="card-body">
-
-
-{/*                   <div className="floorplan-image-container">
+            {/*                   <div className="floorplan-image-container">
                     <img src={
                         img
                     } alt="Floor Plan" className="floorplan-image" />
@@ -132,7 +126,12 @@ const CreateRoom = ({toggle,setToggle}) => {
                     {/* Room Name */}
                     <div className="col-md-4">
                       <label className="form-label">Room Name</label>
-                      <Field name="roomname" type="text" className="form-control" />
+                      <Field
+                        name="roomname"
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter room name"
+                      />
                       <div className="text-danger">
                         <ErrorMessage name="roomname" />
                       </div>
@@ -141,7 +140,12 @@ const CreateRoom = ({toggle,setToggle}) => {
                     {/* Floor */}
                     <div className="col-md-4">
                       <label className="form-label">Floor</label>
-                      <Field name="floor" type="number" className="form-control" />
+                      <Field
+                        name="floor"
+                        type="number"
+                        className="form-control"
+                        placeholder="Enter floor number"
+                      />
                       <div className="text-danger">
                         <ErrorMessage name="floor" />
                       </div>
@@ -150,7 +154,12 @@ const CreateRoom = ({toggle,setToggle}) => {
                     {/* Capacity */}
                     <div className="col-md-4">
                       <label className="form-label">Capacity</label>
-                      <Field name="capacity" type="number" className="form-control" />
+                      <Field
+                        name="capacity"
+                        type="number"
+                        className="form-control"
+                        placeholder="Enter capacity"
+                      />
                       <div className="text-danger">
                         <ErrorMessage name="capacity" />
                       </div>
@@ -158,7 +167,12 @@ const CreateRoom = ({toggle,setToggle}) => {
 
                     <div className="col-md-4">
                       <label className="form-label">Position</label>
-                      <Field name="position" type="number" className="form-control" />
+                      <Field
+                        name="position"
+                        type="number"
+                        className="form-control"
+                        placeholder="Enter position"
+                      />
                       <div className="text-danger">
                         <ErrorMessage name="position" />
                       </div>
@@ -174,9 +188,9 @@ const CreateRoom = ({toggle,setToggle}) => {
                         multiple
                         value={values.features}
                         onChange={(e) => {
-                          const selected = Array.from(e.target.selectedOptions).map((opt) =>
-                            parseInt(opt.value)
-                          );
+                          const selected = Array.from(
+                            e.target.selectedOptions
+                          ).map((opt) => parseInt(opt.value));
                           setFieldValue("features", selected);
                         }}
                       >
@@ -199,7 +213,7 @@ const CreateRoom = ({toggle,setToggle}) => {
                       className="btn btn-primary btn-lg"
                       disabled={isSubmitting}
                     >
-                      ➕ Create Room
+                      Create Room
                     </button>
                   </div>
                 </Form>

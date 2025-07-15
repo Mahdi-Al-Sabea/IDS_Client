@@ -16,19 +16,21 @@ function formatDateTime(dateStr) {
   return new Date(dateStr).toLocaleString(undefined, options);
 }
 
-function splitMeetings(meetings) {
+function splitMeetings(meetingsList) {
   const now = new Date();
   const ongoing = [];
   const upcoming = [];
   const previous = [];
 
-  meetings.forEach((m) => {
-    const start = new Date(m.startsAt);
-    const end = new Date(m.endsAt);
-    if (start <= now && now <= end && m.status != "completed") ongoing.push(m);
-    else if (start > now) upcoming.push(m);
-    else previous.push(m);
-  });
+  meetingsList
+    .forEach((m) => {
+      const start = new Date(m.startsAt);
+      const end = new Date(m.endsAt);
+      if (start <= now && now <= end && m.status !== "completed")
+        ongoing.push(m);
+      else if (start > now) upcoming.push(m);
+      else previous.push(m);
+    });
 
   ongoing.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
   upcoming.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
@@ -56,6 +58,11 @@ export default function MeetingsList() {
   const [features, setFeatures] = useState([]);
   const [selectedFeatures, setSelectedFeatures] = useState([]);
   const [filteredRooms, setFilteredRooms] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    meetingId: null,
+    state: "",
+  });
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -84,6 +91,8 @@ export default function MeetingsList() {
         "http://127.0.0.1:8000/api/User/Profile"
       );
       const id = profileRes.data.data.id;
+      console.log(id);
+      setUserId(id);
       const res = await axios.get(
         `http://127.0.0.1:8000/api/User/${id}/meetings`,
         config
@@ -94,6 +103,14 @@ export default function MeetingsList() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const confirmComplete = (id) => {
+    setConfirmModal({ show: true, meetingId: id, state: "complete" });
+  };
+
+  const confirmCancel = (id) => {
+    setConfirmModal({ show: true, meetingId: id, state: "cancelled" });
   };
 
   const fetchUsers = async () => {
@@ -161,7 +178,7 @@ export default function MeetingsList() {
                 <h3 className="meeting-title">{m.title}</h3>
 
                 <div className="meeting-tags">
-                  {m.organizer_id == userId && (
+                  {m.organizer_id === parseInt(userId) && (
                     <span className="organizer-badge">
                       You are the Organizer
                     </span>
@@ -220,7 +237,7 @@ export default function MeetingsList() {
                     className="cancel-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCancel(m.id);
+                      confirmCancel(m.id);
                     }}
                   >
                     Cancel
@@ -230,7 +247,7 @@ export default function MeetingsList() {
                       className="complete-btn"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleComplete(m.id);
+                        confirmComplete(m.id);
                       }}
                     >
                       Complete
@@ -250,7 +267,6 @@ export default function MeetingsList() {
     fetchUsers();
     fetchRooms();
     fetchFeatures();
-    setUserId(localStorage.getItem("id"));
   }, []);
 
   useEffect(() => {
@@ -354,33 +370,31 @@ export default function MeetingsList() {
   };
 
   const handleCancel = async (meetingId) => {
-    if (!window.confirm("Are you sure you want to cancel this meeting?"))
-      return;
-
     try {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
+      await axios.put(
+        `http://127.0.0.1:8000/api/Meeting/${confirmModal.meetingId}/status`,
+        { status: "cancelled" },
         config
       );
-      toast.success("Meeting cancelled.");
-      fetchMeetings();
+      toast.success("Meeting marked as cancelled.");
+      setConfirmModal({ show: false, meetingId: null, state: "" });
+      setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
-      console.error("Cancel error", error);
-      toast.error("Failed to cancel meeting.");
+      console.error("Status update error", error);
+      toast.error("Failed to update status.");
     }
   };
 
-  const handleComplete = async (meetingId) => {
-    if (!window.confirm("Mark this meeting as completed?")) return;
-
+  const handleComplete = async () => {
     try {
       await axios.put(
-        `http://127.0.0.1:8000/api/Meeting/${meetingId}/status`,
+        `http://127.0.0.1:8000/api/Meeting/${confirmModal.meetingId}/status`,
         { status: "completed" },
         config
       );
       toast.success("Meeting marked as completed.");
-      fetchMeetings();
+      setConfirmModal({ show: false, meetingId: null });
+      setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
       console.error("Status update error", error);
       toast.error("Failed to update status.");
@@ -669,12 +683,12 @@ export default function MeetingsList() {
 
         /* Ongoing */
         .ongoing-highlight {
-          background-color: #e6fcf5;
+          background-color: #f0f8ff;
         }
 
         /* Ongoing Tag */
         .status-chip.ongoing {
-          background-color: #20c997;
+          background-color: #5494da;
           color: white;
           padding: 0.2rem 0.5rem;
           border-radius: 5px;
@@ -725,7 +739,7 @@ export default function MeetingsList() {
               borderRadius: "16px",
               padding: "2.5rem 2rem",
               width: "100%",
-              maxWidth: "80%",
+              maxWidth: "50%",
               boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
               position: "relative",
               display: "flex",
@@ -1370,6 +1384,54 @@ export default function MeetingsList() {
         </div>
       )}
 
+      {confirmModal.show && (
+        <div style={overlayStyle}>
+          <div style={modalStyle}>
+            <h4 style={{ marginBottom: "1rem" }}>
+              Mark Meeting as {confirmModal.state}?
+            </h4>
+            <p style={{ color: "#666", marginBottom: "1.5rem" }}>
+              Are you sure you want to mark this meeting as{" "}
+              <strong>{confirmModal.state}</strong>?
+            </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+              }}
+            >
+              <button
+                onClick={() =>
+                  setConfirmModal({ show: false, meetingId: null, state: "" })
+                }
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: "#e0e0e0",
+                  color: "#333",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={
+                  confirmModal.state === "complete"
+                    ? handleComplete
+                    : handleCancel
+                }
+                className={
+                  confirmModal.state === "complete"
+                    ? "complete-btn"
+                    : "cancel-btn"
+                }
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="meetings-section">
         <h3 className="meetings-title" style={{ color: "#0d6efd" }}>
           Ongoing Meetings
@@ -1415,3 +1477,33 @@ export default function MeetingsList() {
     </>
   );
 }
+
+const overlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 1000,
+};
+
+const modalStyle = {
+  backgroundColor: "#fff",
+  borderRadius: "12px",
+  padding: "2rem",
+  width: "100%",
+  maxWidth: "400px",
+  boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2)",
+  animation: "fadeIn 0.3s ease",
+};
+
+const buttonStyle = {
+  padding: "0.5rem 1rem",
+  borderRadius: "6px",
+  border: "none",
+  cursor: "pointer",
+};

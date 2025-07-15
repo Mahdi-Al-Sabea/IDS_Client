@@ -130,7 +130,7 @@
   text-transform: capitalize;
 }
 
-.status-badge.completed {
+.status-badge.Completed {
   background-color: #d3f9d8;
   color: #2f9e44;
 }
@@ -205,6 +205,20 @@
   color: #842029;
 }
 
+.status-badge.cancelled {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.status-chip.cancelled {
+  background-color: #e0f0ff;
+  color: #842029;
+}
+
+.status-chip.completed {
+  background-color: #e0f0ff;
+  color: green;
+}
 
 .meeting-date-title {
   font-size: 1.3rem;

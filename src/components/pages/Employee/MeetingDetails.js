@@ -13,6 +13,13 @@ import {
 import "./MeetingDetails.css";
 import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
+import { useUser } from "../../../hooks/UserContext";
+
+
+
+
+
+
 function formatDateTime(dateStr) {
   if (!dateStr) return "";
   const options = {
@@ -26,6 +33,7 @@ function formatDateTime(dateStr) {
 }
 
 export default function MeetingDetails() {
+  const { user } = useUser();
   const Navigate = useNavigate();
   const { id } = useParams();
   const [meeting, setMeeting] = useState(null);
@@ -89,6 +97,29 @@ export default function MeetingDetails() {
     meetingId: null,
     state: "",
   });
+
+
+
+  const handleViewPDF = async ($id) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/Minutes/generateReport/${id}`, {
+        responseType: 'blob',
+        headers: {
+          Accept: 'application/pdf',
+        },
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error opening PDF:', error);
+    }
+  };
+
+
+
+
+
   useEffect(() => {
     const filtered = rooms.filter((room) => {
       const roomfeaturesIds = room.features.map((item) => item.id);
@@ -129,8 +160,9 @@ export default function MeetingDetails() {
       }
 
       console.log(fetchedMeeting);
+
       setIsUserOrganizer(
-        String(fetchedMeeting.organizer_id) === userId
+        fetchedMeeting.organizer_id == user.id
       );
       setAgendas(fetchedMeeting.agendas || []);
       setMinutesData({
@@ -909,9 +941,9 @@ export default function MeetingDetails() {
           <div className="card shadow" style={cardStyle}>
             {past && meeting.minutes && (
               <div style={{ textAlign: "center" }}>
-                <button className="btn btn-outline-danger">
+                <button className="btn btn-outline-danger" onClick={() => handleViewPDF(meeting.minutes.id)}>
                   <FaFilePdf style={{ marginRight: "8px" }} />
-                  Download Minutes as PDF
+                  View or Download Minutes as PDF
                 </button>
               </div>
             )}

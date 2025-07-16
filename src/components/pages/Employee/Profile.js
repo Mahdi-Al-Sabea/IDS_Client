@@ -127,7 +127,7 @@ export default function Profile() {
         </style>
       </div>
     );
-    
+
   if (!user)
     return (
       <div className="container mt-4">
@@ -137,7 +137,7 @@ export default function Profile() {
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">👤 My Profile</h2>
+      <h2 className="mb-4 text-center">👤 My Profile</h2>
 
       <div className="card shadow-sm p-4">
         <Formik
@@ -154,115 +154,140 @@ export default function Profile() {
         >
           {({ isSubmitting, setFieldValue }) => (
             <Form>
-              <div className="mb-3">
-                <label className="form-label">Full Name</label>
-                <Field name="name" className="form-control" disabled={!edit} />
-                <div className="text-danger">
-                  <ErrorMessage name="name" />
+              <div className="row">
+                {/* Left column */}
+                <div className="col-md-6">
+                  <div className="mb-3">
+                    <label className="form-label">Full Name</label>
+                    <Field
+                      name="name"
+                      className="form-control"
+                      disabled={!edit}
+                    />
+                    <div className="text-danger">
+                      <ErrorMessage name="name" />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Email</label>
+                    <Field
+                      type="email"
+                      name="email"
+                      className="form-control"
+                      disabled={!edit}
+                    />
+                    <div className="text-danger">
+                      <ErrorMessage name="email" />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Role</label>
+                    <Field
+                      as="select"
+                      name="role"
+                      className="form-select"
+                      disabled={!edit}
+                    >
+                      <option value="Admin">Admin</option>
+                      <option value="Employee">Employee</option>
+                      <option value="Guest">Guest</option>
+                    </Field>
+                    <div className="text-danger">
+                      <ErrorMessage name="role" />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Right column */}
+                <div className="col-md-6">
+                  <div className="mb-3">
+                    <label className="form-label">New Password</label>
+                    <Field
+                      type="password"
+                      name="password"
+                      className="form-control"
+                      disabled={!edit}
+                    />
+                    <div className="text-danger">
+                      <ErrorMessage name="password" />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Confirm Password</label>
+                    <Field
+                      type="password"
+                      name="password_confirmation"
+                      className="form-control"
+                      disabled={!edit}
+                    />
+                    <div className="text-danger">
+                      <ErrorMessage name="password_confirmation" />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Profile Picture</label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      name="profile_picture"
+                      accept="image/*"
+                      disabled={!edit}
+                      onChange={(event) => {
+                        setFieldValue(
+                          "profile_picture",
+                          event.currentTarget.files[0]
+                        );
+                        setImagePreview(
+                          URL.createObjectURL(event.currentTarget.files[0])
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+                {imagePreview && (
+                  <div className="mb-3 text-center">
+                    <div style={{ margin: "auto" }}>
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        style={{
+                          height: "150px",
+                          width: "140px",
+                          objectFit: "cover",
+                          borderRadius: "50%",
+                          border: "2px solid #dee2e6",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="mb-3">
-                <label className="form-label">Email</label>
-                <Field
-                  type="email"
-                  name="email"
-                  className="form-control"
-                  disabled={!edit}
-                />
-                <div className="text-danger">
-                  <ErrorMessage name="email" />
-                </div>
+              {/* Submit button */}
+              <div className="text-center mt-4">
+                {edit ? (
+                  <button type="submit" className="btn btn-primary px-4">
+                    💾 Save Changes
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary px-4"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setEditing(true);
+                      console.log("Edit button clicked");
+                    }}
+                  >
+                    ✏️ Edit Profile
+                  </button>
+                )}
               </div>
-
-              <div className="mb-3">
-                <label className="form-label">Role</label>
-                <Field
-                  as="select"
-                  name="role"
-                  className="form-select"
-                  disabled={!edit}
-                >
-                  <option value="Admin">Admin</option>
-                  <option value="Employee">Employee</option>
-                  <option value="Guest">Guest</option>
-                </Field>
-                <div className="text-danger">
-                  <ErrorMessage name="role" />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">New Password</label>
-                <Field
-                  type="password"
-                  name="password"
-                  className="form-control"
-                  disabled={!edit}
-                />
-                <div className="text-danger">
-                  <ErrorMessage name="password" />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Confirm Password</label>
-                <Field
-                  type="password"
-                  name="password_confirmation"
-                  className="form-control"
-                  disabled={!edit}
-                />
-                <div className="text-danger">
-                  <ErrorMessage name="password_confirmation" />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Profile Picture</label>
-                <input
-                  type="file"
-                  className="form-control"
-                  name="profile_picture"
-                  accept="image/*"
-                  disabled={!edit}
-                  onChange={(event) => {
-                    setFieldValue(
-                      "profile_picture",
-                      event.currentTarget.files[0]
-                    );
-                    setImagePreview(
-                      URL.createObjectURL(event.currentTarget.files[0])
-                    );
-                  }}
-                />
-              </div>
-
-              {imagePreview && (
-                <div className="mb-3">
-                  <label className="form-label">Preview:</label>
-                  <br />
-                  <img src={imagePreview} alt="Preview" height="100" />
-                </div>
-              )}
-
-              {edit ? (
-                <button type="submit" className="btn btn-primary">
-                  💾 Save Changes
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setEditing(true);
-                    console.log("Edit button clicked");
-                  }}
-                >
-                  ✏️ Edit Profile
-                </button>
-              )}
             </Form>
           )}
         </Formik>

@@ -7,14 +7,14 @@ export default function Sidebar() {
   const location = useLocation();
 
   const [user, setUser] = useState(null);
-
-  const [notifications, setNotifications] = useState([]);
+  const [allNotifications, setAllNotifications] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [tab, setTab] = useState("unread"); // 'unread' or 'read'
 
   const fetchNotifications = async () => {
     try {
       const response = await axios("http://127.0.0.1:8000/api/Notification");
-      setNotifications(response.data.data);
+      setAllNotifications(response.data.data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -23,34 +23,20 @@ export default function Sidebar() {
   const deleteNotification = async (id) => {
     try {
       await axios.delete(`http://127.0.0.1:8000/api/Notification/${id}`);
-      setNotifications((prev) =>
-        prev.filter((notification) => notification.id !== id)
+      setAllNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "read" } : n))
       );
     } catch (error) {
       console.error("Error deleting notification:", error);
     }
   };
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    console.log(storedUser);
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      if (parsedUser) {
-        setUser(parsedUser);
-        fetchNotifications(); // Fetch notifications when user is set
-      } else {
-        navigate("/signin");
-      }
-    } catch {
-      navigate("/signin");
-    }
-  }, [navigate]);
-
-  const markAllAsRead = async (userId) => {
+  const markAllAsRead = async () => {
     try {
       await axios.delete("http://127.0.0.1:8000/api/Notifications/markAllRead");
-      setNotifications([]);
+      setAllNotifications((prev) =>
+        prev.map((n) => ({ ...n, status: "read" }))
+      );
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
@@ -64,6 +50,29 @@ export default function Sidebar() {
   };
 
   const isActive = (path) => location.pathname === path;
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      if (parsedUser) {
+        setUser(parsedUser);
+        fetchNotifications();
+      } else {
+        navigate("/signin");
+      }
+    } catch {
+      navigate("/signin");
+    }
+  }, [navigate]);
+
+  const unreadCount = allNotifications.filter(
+    (n) => n.status !== "read"
+  ).length;
+
+  const filteredNotifications = allNotifications.filter((n) =>
+    tab === "unread" ? n.status !== "read" : n.status === "read"
+  );
 
   if (!user) return null;
 
@@ -81,16 +90,6 @@ export default function Sidebar() {
           <ul className="nav flex-column gap-1">
             {user.role === "Admin" && (
               <>
-                {/*               <li className="nav-item">
-                <Link
-                  to="/floorplan"
-                  className={`nav-link ${
-                    isActive("/floorplan") ? "bg-light text-dark" : "text-white"
-                  } rounded px-3 py-2`}
-                >
-                  Floor Plan
-                </Link>
-              </li> */}
                 <li className="nav-item">
                   <Link
                     to="/dashboardAdmin"
@@ -177,32 +176,32 @@ export default function Sidebar() {
                   </Link>
                 </li>
                 {user.role === "Employee" && (
-                  <li className="nav-item">
-                    <Link
-                      to="/profile"
-                      className={`nav-link ${
-                        isActive("/profile")
-                          ? "bg-light text-dark"
-                          : "text-white"
-                      } rounded px-3 py-2`}
-                    >
-                      Profile
-                    </Link>
-                  </li>
-                )}
-                {user.role === "Employee" && (
-                  <li className="nav-item">
-                    <Link
-                      to="/ActionItems"
-                      className={`nav-link ${
-                        isActive("/ActionItems")
-                          ? "bg-light text-dark"
-                          : "text-white"
-                      } rounded px-3 py-2`}
-                    >
-                      Action Items
-                    </Link>
-                  </li>
+                  <>
+                    <li className="nav-item">
+                      <Link
+                        to="/ActionItems"
+                        className={`nav-link ${
+                          isActive("/ActionItems")
+                            ? "bg-light text-dark"
+                            : "text-white"
+                        } rounded px-3 py-2`}
+                      >
+                        Action Items
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link
+                        to="/profile"
+                        className={`nav-link ${
+                          isActive("/profile")
+                            ? "bg-light text-dark"
+                            : "text-white"
+                        } rounded px-3 py-2`}
+                      >
+                        Profile
+                      </Link>
+                    </li>
+                  </>
                 )}
               </>
             )}
@@ -228,9 +227,9 @@ export default function Sidebar() {
               </span>
               Notifications
             </span>
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="badge bg-danger rounded-pill">
-                {notifications.length}
+                {unreadCount}
               </span>
             )}
           </button>
@@ -244,12 +243,38 @@ export default function Sidebar() {
         </div>
       </div>
 
+      {/* Profile Icon in Top-Right Corner */}
+      <div
+        style={{
+          position: "fixed",
+          top: "15px",
+          right: "20px",
+          zIndex: 1050,
+          cursor: "pointer",
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+          backgroundColor: "white",
+          color: "white",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "1.2rem",
+          boxShadow: "0 2px 6px #343a40",
+        }}
+        onClick={() => navigate("/profile")} // or any profile route
+        title="Profile"
+      >
+        👤
+      </div>
+
       {showModal && (
         <div
           className={`modal fade ${showModal ? "show d-block" : ""}`}
           tabIndex="-1"
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
           role="dialog"
+          key={tab}
         >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
@@ -261,21 +286,55 @@ export default function Sidebar() {
                   onClick={() => setShowModal(false)}
                 ></button>
               </div>
-              <button
-                className="btn btn-sm btn-primary"
-                style={{
-                  background: "lightblue",
-                  color: "black",
-                }}
-                onClick={markAllAsRead}
-                disabled={notifications.length === 0}
-              >
-                Mark all as read
-              </button>
+
               <div className="modal-body">
+                <div className="mb-3 d-flex justify-content-center gap-3">
+                  <button
+                    style={{
+                      minHeight: "30px",
+                      maxHeight: "30px",
+                      border: "1px solid black",
+                      backgroundColor: tab === "unread" ? "black" : "white",
+                      color: tab === "unread" ? "white" : "black",
+                      padding: "5px 15px",
+                      borderRadius: "5px",
+                    }}
+                    onClick={() => setTab("unread")}
+                  >
+                    Unread
+                  </button>
+                  <button
+                    style={{
+                      minHeight: "30px",
+                      maxHeight: "30px",
+                      border: "1px solid black",
+                      backgroundColor: tab === "read" ? "black" : "white",
+                      color: tab === "read" ? "white" : "black",
+                      padding: "5px 15px",
+                      borderRadius: "5px",
+                    }}
+                    onClick={() => setTab("read")}
+                  >
+                    Read
+                  </button>
+                </div>
+
+                {tab === "unread" && (
+                  <div className="text-end mb-2">
+                    {unreadCount !== 0 && (
+                      <button
+                        className="btn btn-sm btn-warning"
+                        onClick={markAllAsRead}
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="list-group">
-                  {notifications.length > 0 ? (
-                    notifications // create a copy so original array isn't mutated
+                  {filteredNotifications.length > 0 ? (
+                    filteredNotifications
                       .sort(
                         (a, b) =>
                           new Date(b.created_at) - new Date(a.created_at)
@@ -290,17 +349,21 @@ export default function Sidebar() {
                           <small className="text-muted mt-1">
                             {new Date(notification.created_at).toLocaleString()}
                           </small>
-                          <button
-                            className="btn btn-danger btn-sm float-end mb-2"
-                            onClick={() => deleteNotification(notification.id)}
-                          >
-                            Mark as read
-                          </button>
+                          {tab === "unread" && (
+                            <button
+                              className="btn btn-danger btn-sm float-end mb-2"
+                              onClick={() =>
+                                deleteNotification(notification.id)
+                              }
+                            >
+                              Mark as read
+                            </button>
+                          )}
                         </div>
                       ))
                   ) : (
                     <div className="text-center text-muted">
-                      No notifications available.
+                      No {tab} notifications.
                     </div>
                   )}
                 </div>

@@ -23,15 +23,13 @@ function splitMeetings(meetingsList) {
   const upcoming = [];
   const previous = [];
 
-  meetingsList
-    .forEach((m) => {
-      const start = new Date(m.startsAt);
-      const end = new Date(m.endsAt);
-      if (start <= now && now <= end && m.status !== "completed")
-        ongoing.push(m);
-      else if (start > now) upcoming.push(m);
-      else previous.push(m);
-    });
+  meetingsList.forEach((m) => {
+    const start = new Date(m.startsAt);
+    const end = new Date(m.endsAt);
+    if (start <= now && now <= end && m.status !== "completed") ongoing.push(m);
+    else if (start > now) upcoming.push(m);
+    else previous.push(m);
+  });
 
   ongoing.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
   upcoming.sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
@@ -65,6 +63,7 @@ export default function MeetingsList() {
     meetingId: null,
     state: "",
   });
+  const [errors, setErrors] = React.useState({});
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -75,6 +74,42 @@ export default function MeetingsList() {
     agendas: [{ description: "" }],
     attendees: [], // updated from attendeesIn to an array
   });
+
+  const titleRef = React.useRef(null);
+  const descriptionRef = React.useRef(null);
+  const startsAtRef = React.useRef(null);
+  const endsAtRef = React.useRef(null);
+  const roomRef = React.useRef(null);
+  // Add more if needed (agendas, attendees...)
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!newMeeting.title.trim()) newErrors.title = "Title is required.";
+    if (!newMeeting.description.trim())
+      newErrors.description = "Description is required.";
+    if (!newMeeting.startsAt) newErrors.startsAt = "Start time is required.";
+    if (!newMeeting.endsAt) newErrors.endsAt = "End time is required.";
+    if (
+      newMeeting.startsAt &&
+      newMeeting.endsAt &&
+      new Date(newMeeting.startsAt) >= new Date(newMeeting.endsAt)
+    )
+      newErrors.endsAt = "End time must be after start time.";
+    if (!newMeeting.room_id) newErrors.room_id = "Please select a room.";
+    if (
+      newMeeting.agendas.length === 0 ||
+      newMeeting.agendas.some((a) => !a.description.trim())
+    )
+      newErrors.agendas = "All agendas must have descriptions.";
+    if (newMeeting.attendees.length === 0)
+      newErrors.attendees = "Please select at least one attendee.";
+
+    setErrors(newErrors);
+
+    const errorKeys = Object.keys(newErrors);
+    return errorKeys.length === 0 ? null : errorKeys[0]; // return first error key or null if no errors
+  };
 
   const errorRef = useRef(null);
 
@@ -300,6 +335,27 @@ export default function MeetingsList() {
 
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
+    const firstErrorKey = validateForm();
+
+    if (firstErrorKey) {
+      // Scroll to the related input
+      const refsMap = {
+        title: titleRef,
+        description: descriptionRef,
+        startsAt: startsAtRef,
+        endsAt: endsAtRef,
+        room_id: roomRef,
+        // add refs for agendas, attendees if you want to scroll to them
+      };
+
+      const ref = refsMap[firstErrorKey];
+      if (ref && ref.current) {
+        ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        ref.current.focus();
+      }
+
+      return;
+    }
     setFormError(null);
 
     if (!newMeeting.attendees.includes(userId)) {
@@ -757,6 +813,7 @@ export default function MeetingsList() {
               aria-label="Close modal"
               onClick={() => {
                 setShowModal(false);
+                setErrors({});
                 setStep(1);
                 setSelectedDate(null);
               }}
@@ -872,11 +929,11 @@ export default function MeetingsList() {
                     autoFocus
                     type="text"
                     placeholder="Title"
+                    ref={titleRef}
                     value={newMeeting.title}
                     onChange={(e) =>
                       setNewMeeting({ ...newMeeting, title: e.target.value })
                     }
-                    required
                     style={{
                       padding: "0.75rem 1rem",
                       fontSize: "1rem",
@@ -884,18 +941,29 @@ export default function MeetingsList() {
                       border: "1.5px solid #ccc",
                     }}
                   />
+                  {errors.title && (
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "0.85rem",
+                        margin: 0,
+                      }}
+                    >
+                      {errors.title}
+                    </p>
+                  )}
 
                   <input
                     type="text"
                     placeholder="Description"
                     value={newMeeting.description}
+                    ref={descriptionRef}
                     onChange={(e) =>
                       setNewMeeting({
                         ...newMeeting,
                         description: e.target.value,
                       })
                     }
-                    required
                     style={{
                       padding: "0.75rem 1rem",
                       fontSize: "1rem",
@@ -904,9 +972,22 @@ export default function MeetingsList() {
                     }}
                   />
 
+                  {errors.description && (
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "0.85rem",
+                        margin: 0,
+                      }}
+                    >
+                      {errors.description}
+                    </p>
+                  )}
+
                   <input
                     type="datetime-local"
                     value={toDatetimeLocal(newMeeting.startsAt)}
+                    ref={startsAtRef}
                     onChange={(e) => {
                       setNewMeeting({
                         ...newMeeting,
@@ -914,7 +995,6 @@ export default function MeetingsList() {
                       });
                       setSelectedDate(e.target.value);
                     }}
-                    required
                     style={{
                       padding: "0.75rem 1rem",
                       fontSize: "1rem",
@@ -922,14 +1002,25 @@ export default function MeetingsList() {
                       border: "1.5px solid #ccc",
                     }}
                   />
+                  {errors.startsAt && (
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "0.85rem",
+                        margin: 0,
+                      }}
+                    >
+                      {errors.startsAt}
+                    </p>
+                  )}
 
                   <input
                     type="datetime-local"
                     value={toDatetimeLocal(newMeeting.endsAt)}
+                    ref={endsAtRef}
                     onChange={(e) =>
                       setNewMeeting({ ...newMeeting, endsAt: e.target.value })
                     }
-                    required
                     style={{
                       padding: "0.75rem 1rem",
                       fontSize: "1rem",
@@ -937,6 +1028,17 @@ export default function MeetingsList() {
                       border: "1.5px solid #ccc",
                     }}
                   />
+                  {errors.endsAt && (
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "0.85rem",
+                        margin: 0,
+                      }}
+                    >
+                      {errors.endsAt}
+                    </p>
+                  )}
 
                   <FloorPlan
                     meeting={newMeeting}
@@ -988,6 +1090,18 @@ export default function MeetingsList() {
                       );
                     })}
                   </div>
+
+                  {errors.room_id && (
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "0.85rem",
+                        margin: 0,
+                      }}
+                    >
+                      {errors.room_id}
+                    </p>
+                  )}
 
                   <div
                     style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}
@@ -1128,6 +1242,17 @@ export default function MeetingsList() {
                   <label style={{ fontWeight: "600", color: "#555" }}>
                     Agendas
                   </label>
+                  {errors.agendas && (
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "0.85rem",
+                        margin: 0,
+                      }}
+                    >
+                      {errors.agendas}
+                    </p>
+                  )}
                   {newMeeting.agendas.map((agenda, idx) => (
                     <div
                       key={idx}
@@ -1144,7 +1269,6 @@ export default function MeetingsList() {
                         onChange={(e) =>
                           handleAgendaChange(idx, e.target.value)
                         }
-                        required
                         style={{
                           flexGrow: 1,
                           padding: "0.6rem 1rem",

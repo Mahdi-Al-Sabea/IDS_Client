@@ -120,7 +120,6 @@ export default function MeetingsCalendar() {
         height="auto"
       />
 
-      {/* Modal for meeting details */}
       {selectedMeeting && (
         <div
           style={{
@@ -129,44 +128,131 @@ export default function MeetingsCalendar() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             zIndex: 1000,
+            padding: "1rem",
           }}
           onClick={closeModal}
         >
           <div
             style={{
-              background: "white",
-              padding: "1rem 2rem",
-              borderRadius: "8px",
-              maxWidth: "500px",
-              width: "90%",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+              backgroundColor: "#fff",
+              borderRadius: "12px",
+              width: "100%",
+              maxWidth: "600px",
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+              position: "relative",
+              overflow: "hidden",
+              padding: "2rem",
+              fontFamily: "Arial, sans-serif",
             }}
-            onClick={(e) => e.stopPropagation()} // Prevent modal close on inner click
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3>{selectedMeeting.title}</h3>
-            <p>
-              <strong>Description:</strong> {selectedMeeting.description}
-            </p>
-            <p>
-              <strong>Status:</strong> {selectedMeeting.status}
-            </p>
-            <p>
-              <strong>Start:</strong>{" "}
-              {new Date(selectedMeeting.startsAt).toLocaleString()}
-            </p>
-            <p>
-              <strong>End:</strong>{" "}
-              {new Date(selectedMeeting.endsAt).toLocaleString()}
-            </p>
-            {/* Add more details as you want */}
-            <button onClick={closeModal} style={{ marginTop: "1rem" }}>
-              Close
+            {/* Close Button */}
+            <button
+              onClick={closeModal}
+              style={{
+                position: "absolute",
+                top: "15px",
+                right: "15px",
+                background: "transparent",
+                border: "none",
+                fontSize: "1.5rem",
+                color: "#999",
+                cursor: "pointer",
+              }}
+              aria-label="Close"
+            >
+              &times;
             </button>
+
+            <h2
+              style={{
+                marginBottom: "1.5rem",
+                fontSize: "1.5rem",
+                color: "#333",
+              }}
+            >
+              {selectedMeeting.title}
+            </h2>
+
+            {/* Grid Layout */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 2fr",
+                rowGap: "1rem",
+                columnGap: "1rem",
+              }}
+            >
+              <div>
+                <strong>Description:</strong>
+              </div>
+              <div>{selectedMeeting.description}</div>
+
+              <div>
+                <strong>Room:</strong>
+              </div>
+              <div>
+                {selectedMeeting.room.roomname} (floor{" "}
+                {selectedMeeting.room.floor})
+              </div>
+
+              <div>
+                <strong>Status:</strong>
+              </div>
+              <div>
+                <span
+                  style={{
+                    padding: "4px 10px",
+                    backgroundColor:
+                      selectedMeeting.status === "Scheduled"
+                        ? "#d1e7dd"
+                        : selectedMeeting.status === "Ongoing"
+                        ? "#fff3cd"
+                        : "#f8d7da",
+                    borderRadius: "5px",
+                    fontWeight: "bold",
+                    display: "inline-block",
+                    minWidth: "80px",
+                    textAlign: "center",
+                  }}
+                >
+                  {selectedMeeting.status}
+                </span>
+              </div>
+
+              <div>
+                <strong>Start:</strong>
+              </div>
+              <div>{new Date(selectedMeeting.startsAt).toLocaleString()}</div>
+
+              <div>
+                <strong>End:</strong>
+              </div>
+              <div>{new Date(selectedMeeting.endsAt).toLocaleString()}</div>
+            </div>
+
+            <div style={{ textAlign: "right", marginTop: "2rem" }}>
+              <button
+                onClick={closeModal}
+                style={{
+                  backgroundColor: "#007bff",
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "0.95rem",
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

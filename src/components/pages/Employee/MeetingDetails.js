@@ -31,6 +31,8 @@ export default function MeetingDetails() {
   const { user } = useUser();
   const Navigate = useNavigate();
   const { id } = useParams();
+  const meetingId = id;
+  console.log("Meeting ID from params:", meetingId);
   const [meeting, setMeeting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -134,7 +136,7 @@ export default function MeetingDetails() {
       console.log(id);
       setUserId(id);
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/Meeting/${id}`,
+        `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -417,10 +419,11 @@ export default function MeetingDetails() {
 
   const handleReschedule = (meeting) => {
     setShowModal(true);
-    if (onGoing || past) {
+    if (onGoing) {
       setStep(3);
-    } else {
-      setStep(2);
+    }
+    if (past) {
+      setStep(4);
     }
     setSelectedDate(meeting.startsAt.split("T")[0]);
 
@@ -570,7 +573,7 @@ export default function MeetingDetails() {
 
     try {
       await axios.put(
-        `http://127.0.0.1:8000/api/Meeting/${id}`,
+        `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
         payload,
         config
       );
@@ -1399,38 +1402,20 @@ export default function MeetingDetails() {
                         Back
                       </button>
 
-                      {!onGoing && !past ? (
-                        <button
-                          type="button"
-                          onClick={handleCreateMeeting}
-                          style={{
-                            padding: "0.7rem 1.5rem",
-                            fontWeight: "600",
-                            borderRadius: "8px",
-                            border: "none",
-                            backgroundColor: "#0d6efd",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Save
-                        </button>
-                      ) : (
-                        <button
-                          type="submit"
-                          style={{
-                            padding: "0.7rem 1.5rem",
-                            fontWeight: "600",
-                            borderRadius: "8px",
-                            border: "none",
-                            backgroundColor: "#0d6efd",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Next
-                        </button>
-                      )}
+                      <button
+                        type="submit"
+                        style={{
+                          padding: "0.7rem 1.5rem",
+                          fontWeight: "600",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: "#0d6efd",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Next
+                      </button>
                     </div>
                   </form>
                 </>
@@ -2103,21 +2088,23 @@ export default function MeetingDetails() {
                     )}
                   </section>
 
-                  {/* Footer Buttons */}
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
-                      marginTop: "2rem",
+                      justifyContent: "flex-end",
+                      gap: "1rem",
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setStep(3)}
-                      style={secondaryBtn}
-                    >
-                      Back
-                    </button>
+                    {!past && (
+                      <button
+                        type="button"
+                        onClick={() => setStep(3)}
+                        style={secondaryBtn}
+                      >
+                        Back
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={handleCreateMeeting}

@@ -253,12 +253,14 @@ const UsersTable = ({toggle, setToggle}) => {
                             <button
                               className="btn btn-sm btn-primary"
                               onClick={() => viewUser(user)}
+                              disabled={user.role === "Admin" ? true : false}
                             >
                               View
                             </button>
                             <button
                               className="btn btn-sm btn-danger"
                               onClick={() => deleteUser(user.id)}
+                              disabled={user.role === "Admin" ? true : false}
                             >
                               Delete
                             </button>

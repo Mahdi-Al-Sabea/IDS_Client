@@ -111,6 +111,15 @@ export default function MeetingsList() {
     return errorKeys.length === 0 ? null : errorKeys[0]; // return first error key or null if no errors
   };
 
+
+  const targetRef = useRef(null);
+
+  const scrollToTarget = () => {
+    if (targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const errorRef = useRef(null);
 
   const navigate = useNavigate();
@@ -1043,6 +1052,7 @@ export default function MeetingsList() {
                   <FloorPlan
                     meeting={newMeeting}
                     setMeeting={setNewMeeting}
+                    scrollToTarget={scrollToTarget}
                   ></FloorPlan>
 
                   <label
@@ -1067,6 +1077,7 @@ export default function MeetingsList() {
 
                       return (
                         <button
+                          ref={targetRef}
                           type="button"
                           key={feature.id}
                           onClick={() => {

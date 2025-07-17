@@ -14,6 +14,7 @@ import "./MeetingDetails.css";
 import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
 import { useUser } from "../../../hooks/UserContext";
+import FloorPlan from "../FloorPlan";
 
 function formatDateTime(dateStr) {
   if (!dateStr) return "";
@@ -45,6 +46,8 @@ export default function MeetingDetails() {
   const [showAddActionItemForm, setShowAddActionItemForm] = useState(false);
   const [isOn, setIsOn] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState([]);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
 
   const toggle = () => setIsOn(!isOn);
 
@@ -148,7 +151,12 @@ export default function MeetingDetails() {
       const start = new Date(fetchedMeeting.startsAt);
       const end = new Date(fetchedMeeting.endsAt);
 
-      if (start <= now && now < end) {
+      if (
+        start <= now &&
+        now < end &&
+        fetchedMeeting.status !== "cancelled" &&
+        fetchedMeeting.status !== "completed"
+      ) {
         setOnGoing(true); // Meeting is currently happening
       } else if (now >= end) {
         setPast(true); // Meeting has ended
@@ -528,6 +536,42 @@ export default function MeetingDetails() {
     setConfirmModal({ show: true, meetingId: id, state: "complete" });
   };
 
+  const handleAddGuest = async () => {
+    if (!guestName || !guestEmail) {
+      toast.error("Please enter both name and email for the guest.");
+      return;
+    }
+
+    const newGuest = {
+      name: guestName,
+      email: guestEmail,
+      role: "Guest",
+      password: "123456",
+      password_confirmation: "123456",
+    };
+
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/User",
+        newGuest
+      );
+      console.log("User created successfully:", response.data);
+      const retrievedUser = response.data.data;
+      toast.success("Guest created successfully");
+      setSelectedUsers((prev) => [...prev, retrievedUser]);
+      setNewMeeting((prev) => ({
+        ...prev,
+        attendees: [...prev.attendees, retrievedUser.id],
+      }));
+    } catch (error) {
+      console.error("Validation errors:");
+    }
+
+    fetchUsers();
+    setGuestName("");
+    setGuestEmail("");
+  };
+
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
     setFormError(null);
@@ -799,18 +843,26 @@ export default function MeetingDetails() {
                   </button>
                 )}
 
-                <button
-                  style={yellowBtn}
-                  onClick={() => handleReschedule(meeting)}
-                >
-                  {onGoing || past ? "Edit" : "Reschedule"}
-                </button>
-                <button
-                  style={redBtn}
-                  onClick={() => confirmCancel(meeting.id)}
-                >
-                  Cancel
-                </button>
+                {meeting.status !== "cancelled" && (
+                  <button
+                    style={yellowBtn}
+                    onClick={() => handleReschedule(meeting)}
+                  >
+                    {onGoing || past || meeting.status === "completed"
+                      ? "Edit"
+                      : "Reschedule"}
+                  </button>
+                )}
+
+                {meeting.status !== "completed" &&
+                  meeting.status !== "cancelled" && (
+                    <button
+                      style={redBtn}
+                      onClick={() => confirmCancel(meeting.id)}
+                    >
+                      Cancel
+                    </button>
+                  )}
               </div>
             )}
           </div>
@@ -881,7 +933,12 @@ export default function MeetingDetails() {
                       }}
                     />
                     <div>
-                      <strong>{user.name}</strong>
+                      <strong>
+                        {user.name}
+                        {user.id === meeting.organizer_id && (
+                          <span style={{ color: "red" }}> (Organizer) </span>
+                        )}
+                      </strong>
                       <p
                         style={{
                           margin: 0,
@@ -893,7 +950,7 @@ export default function MeetingDetails() {
                       </p>
                     </div>
                   </div>
-                  {isUserOrganizer && (
+                  {isUserOrganizer && (onGoing || past) && (
                     <div>
                       <form>
                         <label style={switchStyle}>
@@ -1379,6 +1436,204 @@ export default function MeetingDetails() {
                       />
                     </div>
 
+                    <FloorPlan
+                      meeting={newMeeting}
+                      setMeeting={setNewMeeting}
+                    ></FloorPlan>
+
+                    <label
+                      style={{
+                        fontWeight: "bold",
+                        display: "block",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Search by Feature:
+                    </label>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "0.5rem",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      {features.map((feature) => {
+                        const isSelected = selectedFeatures.includes(
+                          feature.id
+                        ); // Use id to track selection
+
+                        return (
+                          <button
+                            type="button"
+                            key={feature.id}
+                            onClick={() => {
+                              setSelectedFeatures((prev) =>
+                                isSelected
+                                  ? prev.filter((id) => id !== feature.id)
+                                  : [...prev, feature.id]
+                              );
+                            }}
+                            style={{
+                              padding: "0.5rem 1rem",
+                              borderRadius: "999px",
+                              border: "1px solid #ccc",
+                              backgroundColor: isSelected
+                                ? "#007bff"
+                                : "#f1f1f1",
+                              color: isSelected ? "#fff" : "#333",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {feature.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}
+                    >
+                      {filteredRooms.length === 0 ? (
+                        <p style={{ fontStyle: "italic", color: "#888" }}>
+                          ❌ No rooms match the selected features.
+                        </p>
+                      ) : (
+                        filteredRooms.map((room) => (
+                          <div
+                            key={room.id}
+                            onClick={() =>
+                              setNewMeeting({ ...newMeeting, room_id: room.id })
+                            }
+                            style={{
+                              flex: "1 1 calc(33.333% - 1rem)",
+                              cursor: "pointer",
+                              padding: "1rem",
+                              borderRadius: "8px",
+                              border:
+                                parseInt(newMeeting.room_id) === room.id
+                                  ? "2px solid #0d6efd"
+                                  : "1px solid #ccc",
+                              backgroundColor:
+                                parseInt(newMeeting.room_id) === room.id
+                                  ? "#e7f1ff"
+                                  : "#fff",
+                              transition: "0.3s ease",
+                            }}
+                          >
+                            <h6>{room.roomname}</h6>
+                            <p>Capacity: {room.capacity}</p>
+                            <ul
+                              style={{
+                                paddingLeft: "1rem",
+                                fontSize: "0.9rem",
+                              }}
+                            >
+                              {room.features.map((f) => (
+                                <li key={f.id}>✅ {f.title}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {meetingsByDate && meetingsByDate.length > 0 && (
+                      <>
+                        <h6 style={{ marginBottom: "0.5rem" }}>
+                          Meetings on{" "}
+                          {new Date(newMeeting.startsAt).toLocaleDateString()}{" "}
+                          in{" "}
+                          {rooms.find(
+                            (r) => r.id === parseInt(newMeeting.room_id)
+                          )?.roomname ?? "Unknown Room"}
+                        </h6>
+
+                        {meetingsByDate.some((meeting) => {
+                          const newStart = new Date(newMeeting.startsAt);
+                          const newEnd = new Date(newMeeting.endsAt);
+                          const existingStart = new Date(meeting.startsAt);
+                          const existingEnd = new Date(meeting.endsAt);
+
+                          return (
+                            newStart < existingEnd &&
+                            newEnd > existingStart &&
+                            newMeeting.id !== meeting.id
+                          );
+                        }) && (
+                          <p
+                            style={{
+                              color: "red",
+                              fontSize: "0.85rem",
+                              marginBottom: "0.5rem",
+                            }}
+                          >
+                            ❌ You cannot reserve during the times below —
+                            conflict detected.
+                          </p>
+                        )}
+
+                        {meetingsByDate.map((meeting, index) => {
+                          const newStart = new Date(newMeeting.startsAt);
+                          const newEnd = new Date(newMeeting.endsAt);
+                          const existingStart = new Date(meeting.startsAt);
+                          const existingEnd = new Date(meeting.endsAt);
+
+                          const isConflict =
+                            newStart < existingEnd &&
+                            newEnd > existingStart &&
+                            meeting.id !== newMeeting.id; // Time overlap check
+
+                          return (
+                            <div
+                              key={index}
+                              style={{
+                                backgroundColor: isConflict
+                                  ? "#ffe6e6"
+                                  : "#f1f1f1",
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                marginBottom: "0.5rem",
+                                borderLeft: `3px solid ${
+                                  isConflict ? "#dc3545" : "#0d6efd"
+                                }`,
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontWeight: "600",
+                                  marginBottom: "0.25rem",
+                                  color: isConflict ? "#b02a37" : "#333",
+                                }}
+                              >
+                                {meeting.title}
+                              </div>
+
+                              <div style={{ color: "#555" }}>
+                                🕒{" "}
+                                {new Date(meeting.startsAt).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}{" "}
+                                -{" "}
+                                {new Date(meeting.endsAt).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
                     <div
                       style={{
                         display: "flex",
@@ -1525,7 +1780,7 @@ export default function MeetingDetails() {
                   </div>
 
                   {/* Meeting Members */}
-                  <div style={{ marginBottom: "2rem" }}>
+                  <div>
                     <h4
                       style={{
                         marginBottom: "0.75rem",
@@ -1645,6 +1900,9 @@ export default function MeetingDetails() {
                         border: "1px solid #ccc",
                         backgroundColor: "#fff",
                         padding: "0.5rem",
+                        overflow: "auto",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
                       }}
                     >
                       {users
@@ -1653,7 +1911,8 @@ export default function MeetingDetails() {
                             user.name
                               .toLowerCase()
                               .includes(searchTerm.toLowerCase()) &&
-                            !selectedUsers.find((u) => u.id === user.id)
+                            !selectedUsers.find((u) => u.id === user.id) &&
+                            user.role !== "Admin"
                         )
                         .map((user) => (
                           <div
@@ -1712,6 +1971,40 @@ export default function MeetingDetails() {
                             </div>
                           </div>
                         ))}
+                    </div>
+                  </div>
+
+                  <div className="card p-3 mt-4 shadow-sm">
+                    <h5>Add External Guest</h5>
+                    <div className="row">
+                      <div className="col-md-5">
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Guest full name"
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-md-5">
+                        <input
+                          type="email"
+                          className="form-control"
+                          placeholder="Guest email"
+                          value={guestEmail}
+                          onChange={(e) => setGuestEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-md-1">
+                        <button
+                          className="btn btn-outline-primary"
+                          type="button"
+                          style={{ marginTop: "0rem" }}
+                          onClick={handleAddGuest}
+                        >
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1777,21 +2070,23 @@ export default function MeetingDetails() {
                       Submit
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setStep(4)}
-                      style={{
-                        padding: "0.7rem 1.5rem",
-                        fontWeight: "600",
-                        borderRadius: "8px",
-                        border: "none",
-                        backgroundColor: "#0d6efd",
-                        color: "white",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Next
-                    </button>
+                    {!(!onGoing && !past) && (
+                      <button
+                        type="button"
+                        onClick={() => setStep(4)}
+                        style={{
+                          padding: "0.7rem 1.5rem",
+                          fontWeight: "600",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: "#0d6efd",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Next
+                      </button>
+                    )}
                   </div>
                 </>
               )}

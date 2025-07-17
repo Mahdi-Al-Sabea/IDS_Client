@@ -64,6 +64,8 @@ export default function MeetingsList() {
     state: "",
   });
   const [errors, setErrors] = React.useState({});
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -109,6 +111,42 @@ export default function MeetingsList() {
 
     const errorKeys = Object.keys(newErrors);
     return errorKeys.length === 0 ? null : errorKeys[0]; // return first error key or null if no errors
+  };
+
+  const handleAddGuest = async () => {
+    if (!guestName || !guestEmail) {
+      toast.error("Please enter both name and email for the guest.");
+      return;
+    }
+
+    const newGuest = {
+      name: guestName,
+      email: guestEmail,
+      role: "Guest",
+      password: "123456",
+      password_confirmation: "123456",
+    };
+
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/User",
+        newGuest
+      );
+      console.log("User created successfully:", response.data);
+      const retrievedUser = response.data.data;
+      toast.success("Guest created successfully");
+      setSelectedUsers((prev) => [...prev, retrievedUser]);
+      setNewMeeting((prev) => ({
+        ...prev,
+        attendees: [...prev.attendees, retrievedUser.id],
+      }));
+    } catch (error) {
+      console.error("Validation errors:");
+    }
+
+    fetchUsers();
+    setGuestName("");
+    setGuestEmail("");
   };
 
   const errorRef = useRef(null);
@@ -220,9 +258,13 @@ export default function MeetingsList() {
                       You are the Organizer
                     </span>
                   )}
-                  {m.isOngoing && (
+                  {m.status === "completed" ? (
+                    <span className="status-chip completed">Completed</span>
+                  ) : m.status === "cancelled" ? (
+                    <span className="status-chip cancelled">Cancelled</span>
+                  ) : m.isOngoing ? (
                     <span className="status-chip ongoing">Ongoing</span>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -256,42 +298,45 @@ export default function MeetingsList() {
                 </p>
               </div>
 
-              {m.organizer_id == userId && type != "past" && (
-                <div className="organizer-actions">
-                  {!m.isOngoing && (
-                    <button
-                      className="reschedule-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleReschedule(m);
-                      }}
-                    >
-                      Reschedule
-                    </button>
-                  )}
+              {m.organizer_id === userId &&
+                type !== "past" &&
+                m.status !== "cancelled" &&
+                m.status !== "completed" && (
+                  <div className="organizer-actions">
+                    {!m.isOngoing && (
+                      <button
+                        className="reschedule-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReschedule(m);
+                        }}
+                      >
+                        Reschedule
+                      </button>
+                    )}
 
-                  <button
-                    className="cancel-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      confirmCancel(m.id);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  {m.isOngoing && (
                     <button
-                      className="complete-btn"
+                      className="cancel-btn"
                       onClick={(e) => {
                         e.stopPropagation();
-                        confirmComplete(m.id);
+                        confirmCancel(m.id);
                       }}
                     >
-                      Complete
+                      Cancel
                     </button>
-                  )}
-                </div>
-              )}
+                    {m.isOngoing && (
+                      <button
+                        className="complete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmComplete(m.id);
+                        }}
+                      >
+                        Complete
+                      </button>
+                    )}
+                  </div>
+                )}
             </div>
           ))}
         </div>
@@ -752,6 +797,24 @@ export default function MeetingsList() {
           padding: 0.2rem 0.5rem;
           border-radius: 5px;
           font-size: 0.75rem;
+        }
+
+        .status-chip.cancelled {
+          background-color: #dc3545;
+          color: white;
+          padding: 0.2rem 0.5rem;
+          border-radius: 5px;
+          font-size: 0.75rem;
+          margin-left: 0.5rem;
+        }
+
+        .status-chip.completed {
+          background-color: #28a745;
+          color: white;
+          padding: 0.2rem 0.5rem;
+          border-radius: 5px;
+          font-size: 0.75rem;
+          margin-left: 0.5rem;
         }
 
         /* Organizer badge */
@@ -1347,12 +1410,15 @@ export default function MeetingsList() {
                           gap: "0.5rem",
                           fontSize: "0.95rem",
                           minWidth: "70px",
+                          overflow: "auto",
+                          scrollbarWidth: "none",
+                          msOverflowStyle: "none",
                         }}
                       >
                         You
                       </div>
                       {selectedUsers
-                        .filter((u) => u.id !== parseInt(userId))
+                        .filter((u) => u.id !== parseInt(user.id))
                         .map((user) => (
                           <div
                             key={user.id}
@@ -1414,19 +1480,30 @@ export default function MeetingsList() {
                     {/* Filtered user dropdown */}
                     <div
                       style={{
+                        minHeight: "120px",
                         maxHeight: "120px",
                         overflowY: "auto",
                         borderRadius: "8px",
+                        marginBottom: "1rem",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                        padding: "0.5rem",
+                        overflow: "auto",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
                       }}
                     >
                       {users
                         .filter(
-                          (user) =>
-                            user.name
+                          (u) =>
+                            u.name
                               .toLowerCase()
                               .includes(searchTerm.toLowerCase()) &&
-                            !selectedUsers.find((u) => u.id === user.id) &&
-                            user.id !== parseInt(userId)
+                            !selectedUsers.find(
+                              (us) => us.id === parseInt(u.id)
+                            ) &&
+                            u.id !== parseInt(user.id) &&
+                            u.role !== "Admin"
                         )
                         .map((user) => (
                           <div
@@ -1440,10 +1517,14 @@ export default function MeetingsList() {
                               setSearchTerm("");
                             }}
                             style={{
-                              padding: "0.5rem 1rem",
-                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.75rem",
+                              padding: "0.5rem",
                               borderBottom: "1px solid #eee",
+                              cursor: "pointer",
                               backgroundColor: "#f9f9f9",
+                              borderRadius: "6px",
                               transition: "background-color 0.2s",
                             }}
                             onMouseEnter={(e) =>
@@ -1455,9 +1536,65 @@ export default function MeetingsList() {
                                 "#f9f9f9")
                             }
                           >
-                            {user.name} ({user.email})
+                            <img
+                              src={
+                                `http://127.0.0.1:8000/${user.profile_picture}` ||
+                                "https://via.placeholder.com/40"
+                              }
+                              alt={user.name}
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "1px solid #ccc",
+                              }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: "bold" }}>
+                                {user.name}
+                              </div>
+                              <div
+                                style={{ fontSize: "0.85rem", color: "#666" }}
+                              >
+                                {user.email}
+                              </div>
+                            </div>
                           </div>
                         ))}
+                    </div>
+                    <div className="card p-3 mt-4 shadow-sm">
+                      <h5>Add External Guest</h5>
+                      <div className="row">
+                        <div className="col-md-5">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Guest full name"
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                          />
+                        </div>
+                        <div className="col-md-5">
+                          <input
+                            type="email"
+                            className="form-control"
+                            placeholder="Guest email"
+                            value={guestEmail}
+                            onChange={(e) => setGuestEmail(e.target.value)}
+                          />
+                        </div>
+                        <div className="col-md-1">
+                          <button
+                            className="btn btn-outline-primary"
+                            type="button"
+                            style={{ marginTop: "0rem" }}
+                            onClick={handleAddGuest}
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

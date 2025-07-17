@@ -5,7 +5,7 @@ import axios from "axios";
 import { useUser } from "../../hooks/UserContext";
 import { ToastContainer, toast } from 'react-toastify';
 
-export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
+export default function FloorPlan({ toggle, setToggle, setMeeting, meeting, scrollToTarget }) {
   const { user } = useUser();
   const [floorRooms, setFloorRooms] = useState(null);
   const [currentFloor, setCurrentFloor] = useState(1);
@@ -25,7 +25,7 @@ export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/Room?floor=${floor}`
+        `http://127.0.0.1:8000/api/Room?floor=${floor}&per_page=6`
       );
       setFloorRooms(response.data.data.data);
       console.log("Fetched floor rooms:", response.data.data.data);
@@ -56,6 +56,7 @@ export default function FloorPlan({ toggle, setToggle, setMeeting, meeting }) {
       // You can implement the logic to navigate to the reservation page or open a modal here
       setMeeting({ ...meeting, room_id: roomId });
       toast.success("Room selected successfully!");
+      scrollToTarget();
     } else {
       console.log("Admin clicked on room:", roomId);
     }

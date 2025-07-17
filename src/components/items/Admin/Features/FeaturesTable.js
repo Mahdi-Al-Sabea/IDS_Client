@@ -154,7 +154,7 @@ const FeaturesTable = ({toggle,setToggle}) => {
       <div className="container mt-4">
         <div className="card shadow-lg mb-4">
           <div className="card-header text-center">
-            <h4>👥 Feature List</h4>
+            <h4>🛠️ Feature List</h4>
           </div>
           <div className="card-body">
             {/* User Search Form */}
@@ -255,7 +255,7 @@ const FeaturesTable = ({toggle,setToggle}) => {
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">👤 View / Edit Feature</h5>
+                <h5 className="modal-title">🛠️ View / Edit Feature</h5>
                 <button
                   type="button"
                   className="btn-close"

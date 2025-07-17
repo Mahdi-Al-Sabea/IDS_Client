@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import img from "../../../../assets/floorplan.jpg";
-const CreateRoom = ({ toggle, setToggle }) => {
+import { useFormikContext } from "formik";
+import PositionSetter from "./PositionSetter";
+
+const CreateRoom = ({ toggle, setToggle, floorPlanPosition , targetRef }) => {
   const [features, setFeatures] = useState([]);
   const roomsPositions = [
     { id: "1", label: "1", top: "19%", left: "61%" },
@@ -91,7 +94,7 @@ const CreateRoom = ({ toggle, setToggle }) => {
   return (
     <>
       <ToastContainer />
-      <div className="container mt-4">
+      <div ref={targetRef} className="container mt-4">
         <div className="card shadow-lg mb-4">
           <div className="card-header text-center">
             <h4>🏨 Create New Room</h4>
@@ -122,6 +125,7 @@ const CreateRoom = ({ toggle, setToggle }) => {
             >
               {({ isSubmitting, values, setFieldValue }) => (
                 <Form>
+                  <PositionSetter floorPlanPosition={floorPlanPosition} />
                   <div className="row g-3">
                     {/* Room Name */}
                     <div className="col-md-4">

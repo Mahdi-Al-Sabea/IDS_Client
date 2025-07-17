@@ -1,7 +1,7 @@
 import img from "../../../../assets/floorplan.jpg";
 
 
-export default function FloorPlanLayout() {
+export default function FloorPlanLayout({ setFloorPlanPosition, scrollToTarget }) {
 
 
   const roomsPositions = [
@@ -17,6 +17,8 @@ export default function FloorPlanLayout() {
 
   const handleClick = (roomId) => {
     console.log("Reserve room:", roomId);
+    setFloorPlanPosition(roomId);
+    scrollToTarget();
     // navigate to reservation flow or open modal
   };
 
@@ -25,7 +27,7 @@ export default function FloorPlanLayout() {
   return (
     <div className="floorplan-wrapper container card shadow-lg mt-4">
       <div className="card-header text-center">
-        <h4>🏢 Floor Rooms Layout</h4>
+        <h4>🏢 Floor Rooms Layout (click on a position to initiate a new room)</h4>
       </div>
 
       <div className="floorplan-image-container">

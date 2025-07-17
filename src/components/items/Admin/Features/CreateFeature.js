@@ -51,7 +51,7 @@ const CreateFeature = ({ toggle, setToggle }) => {
       <div className="container mt-4">
         <div className="card shadow-lg mb-4">
           <div className="card-header text-center">
-            <h4>👤 Create New Feature</h4>
+            <h4>🛠️ Create New Feature</h4>
           </div>
           <div className="card-body">
             <Formik

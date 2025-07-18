@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState,useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import {
@@ -50,6 +50,15 @@ export default function MeetingDetails() {
   const [guestEmail, setGuestEmail] = useState("");
 
   const toggle = () => setIsOn(!isOn);
+
+
+    const targetRef = useRef(null);
+  
+    const scrollToTarget = () => {
+      if (targetRef.current) {
+        targetRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    };
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -1145,7 +1154,7 @@ export default function MeetingDetails() {
                 borderRadius: "16px",
                 padding: "2.5rem 2rem",
                 width: "100%",
-                maxWidth: "480px",
+                maxWidth: "50%",
                 boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
                 position: "relative",
                 display: "flex",
@@ -1435,10 +1444,10 @@ export default function MeetingDetails() {
                         }}
                       />
                     </div>
-
                     <FloorPlan
                       meeting={newMeeting}
                       setMeeting={setNewMeeting}
+                      scrollToTarget={scrollToTarget}
                     ></FloorPlan>
 
                     <label
@@ -1467,6 +1476,7 @@ export default function MeetingDetails() {
                           <button
                             type="button"
                             key={feature.id}
+                            ref={targetRef}
                             onClick={() => {
                               setSelectedFeatures((prev) =>
                                 isSelected

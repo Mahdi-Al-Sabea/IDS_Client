@@ -109,3 +109,105 @@
   color: #495057;
   text-decoration: underline;
 }
+
+.balls-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.ball {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: floatUp linear infinite;
+}
+
+.ball-1 {
+  width: 20px;
+  height: 20px;
+  background-color: #4fc3f7;
+  left: 20%;
+  animation-duration: 10s;
+  animation-delay: 0s;
+}
+
+.ball-2 {
+  width: 30px;
+  height: 30px;
+  background-color: #81d4fa;
+  left: 70%;
+  animation-duration: 12s;
+  animation-delay: 1s;
+}
+
+.ball-3 {
+  width: 15px;
+  height: 15px;
+  background-color: #29b6f6;
+  left: 40%;
+  animation-duration: 8s;
+  animation-delay: 2s;
+}
+
+.ball-4 {
+  width: 25px;
+  height: 25px;
+  background-color: #03a9f4;
+  left: 10%;
+  animation-duration: 11s;
+  animation-delay: 3s;
+}
+
+.ball-5 {
+  width: 10px;
+  height: 10px;
+  background-color: #0288d1;
+  left: 90%;
+  animation-duration: 9s;
+  animation-delay: 0.5s;
+}
+
+.ball-6, .ball-7, .ball-8, .ball-9, .ball-10 {
+  /* Add more styles for more variety */
+  width: 12px;
+  height: 12px;
+  background-color: #039be5;
+  left: calc(10% + 10px * var(--i));
+  animation-duration: calc(6s + var(--i) * 1s);
+  animation-delay: calc(var(--i) * 0.3s);
+}
+
+/* Animation for the balls */
+@keyframes floatUp {
+  0% {
+    bottom: -50px;
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(30px) scale(1.2);
+  }
+  100% {
+    bottom: 110%;
+    transform: translateX(-30px) scale(1);
+  }
+}
+
+
+.left-pane {
+  position: relative; /* Required to position .balls-container */
+  overflow: hidden;
+  flex: 1;
+  background: linear-gradient(#0f2249, #303134);
+  color: white;
+  padding: 4rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 1;
+}
+

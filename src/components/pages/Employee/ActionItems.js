@@ -7,6 +7,10 @@ const ActionItemsPage = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [nextStatus, setNextStatus] = useState("");
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -34,23 +38,34 @@ const ActionItemsPage = () => {
     fetchTasks();
   }, []);
 
-  const toggleTask = async (task) => {
+  const confirmToggleTask = (task) => {
     const newStatus = task.status === "Completed" ? "Pending" : "Completed";
+    setSelectedTask(task);
+    setNextStatus(newStatus);
+    setShowModal(true);
+  };
 
+  const handleToggleConfirmed = async () => {
     try {
       await axios.put(
-        `http://127.0.0.1:8000/api/ActionItem/${task.id}/toggle`,
+        `http://127.0.0.1:8000/api/ActionItem/${selectedTask.id}/toggle`,
         {
-          status: newStatus,
+          status: nextStatus,
         }
       );
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
+        prev.map((t) =>
+          t.id === selectedTask.id ? { ...t, status: nextStatus } : t
+        )
       );
-      toast.success("Task Status Changed Successfully");
+      toast.success("Task status changed successfully");
     } catch (error) {
-      toast.error("Error updating task:", error);
+      toast.error("Error updating task");
+    } finally {
+      setShowModal(false);
+      setSelectedTask(null);
+      setNextStatus("");
     }
   };
 
@@ -58,7 +73,7 @@ const ActionItemsPage = () => {
     return (
       <div
         style={{
-          height: "100vh", // full viewport height
+          height: "100vh",
           padding: "3rem",
           display: "flex",
           justifyContent: "center",
@@ -85,6 +100,7 @@ const ActionItemsPage = () => {
         </style>
       </div>
     );
+
   return (
     <>
       <div className="action-items-container">
@@ -112,7 +128,7 @@ const ActionItemsPage = () => {
                     {t.assignee?.email})
                   </p>
                 </div>
-                <button className="toggle-btn" onClick={() => toggleTask(t)}>
+                <button className="toggle-btn" onClick={() => confirmToggleTask(t)}>
                   {t.status === "Completed"
                     ? "Mark as Pending"
                     : "Mark as Complete"}
@@ -122,6 +138,28 @@ const ActionItemsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Confirm Action</h3>
+            <p>
+              Are you sure you want to mark this task as{" "}
+              <strong>{nextStatus}</strong>?
+            </p>
+            <div className="modal-buttons">
+              <button className="confirm-btn" onClick={handleToggleConfirmed}>
+                Yes
+              </button>
+              <button className="cancel-btn" onClick={() => setShowModal(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer />
     </>
   );

@@ -57,9 +57,15 @@ export default function SignIn() {
   return (
     <div className="login-page">
       <div className="left-pane">
-        <h1>Welcome Back 👋</h1>
+        <div className="balls-container">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className={`ball ball-${i + 1}`}></div>
+          ))}
+        </div>
+        <h1 style={{zIndex :99}}>Welcome Back 👋</h1>
         <p>Log in to manage your meetings and tasks efficiently.</p>
       </div>
+
       <div className="right-pane">
         <div className="form-container">
           <h2>Sign In</h2>

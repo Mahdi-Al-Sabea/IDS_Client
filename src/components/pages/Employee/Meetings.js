@@ -39,6 +39,7 @@ function splitMeetings(meetingsList) {
 }
 
 export default function MeetingsList() {
+  const today = new Date().toISOString().split("T")[0]; // e.g., "2025-07-17"
   const { user } = useUser();
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -918,6 +919,7 @@ export default function MeetingsList() {
 
                 <input
                   type="date"
+                  min={today}
                   value={selectedDate || ""}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{
@@ -1057,6 +1059,7 @@ export default function MeetingsList() {
 
                   <input
                     type="datetime-local"
+                    min = {today + "T00:00"}
                     value={toDatetimeLocal(newMeeting.startsAt)}
                     ref={startsAtRef}
                     onChange={(e) => {
@@ -1087,6 +1090,7 @@ export default function MeetingsList() {
 
                   <input
                     type="datetime-local"
+                    min = {today + "T00:00"}
                     value={toDatetimeLocal(newMeeting.endsAt)}
                     ref={endsAtRef}
                     onChange={(e) =>

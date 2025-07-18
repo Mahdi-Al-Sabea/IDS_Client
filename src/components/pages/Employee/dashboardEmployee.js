@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaCalendarAlt, FaTasks, FaCheck } from "react-icons/fa";
 import "./dashboardEmployee.css";
+import { Navigate, useNavigate } from "react-router-dom";
 
 const EmployeeDashboard = () => {
+  const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +105,8 @@ const EmployeeDashboard = () => {
         <div className="meeting-card-grid">
           {items.map((m) => (
             <div
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate(`/meeting/${m.id}`)}
               key={m.id}
               className={`meeting-card-ui ${
                 type === "upcoming" ? "meeting-upcoming" : "meeting-past"

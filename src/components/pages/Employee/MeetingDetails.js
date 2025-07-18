@@ -1,4 +1,4 @@
-import React, { useEffect, useState,useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import {
@@ -48,17 +48,17 @@ export default function MeetingDetails() {
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
+  const today = new Date().toISOString().split("T")[0]; // e.g., "2025-07-17"
 
   const toggle = () => setIsOn(!isOn);
 
+  const targetRef = useRef(null);
 
-    const targetRef = useRef(null);
-  
-    const scrollToTarget = () => {
-      if (targetRef.current) {
-        targetRef.current.scrollIntoView({ behavior: "smooth" });
-      }
-    };
+  const scrollToTarget = () => {
+    if (targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
@@ -229,9 +229,9 @@ export default function MeetingDetails() {
           room_id: meeting.room_id,
           title: meeting.title,
           description: meeting.description,
-          startsAt: meeting.startsAt,
-          endsAt: meeting.endsAt,
           agendas,
+          startsAt: dayjs(meeting.startsAt).format("YYYY-MM-DDTHH:mm"),
+          endsAt: dayjs(meeting.endsAt).format("YYYY-MM-DDTHH:mm"),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -439,7 +439,7 @@ export default function MeetingDetails() {
     if (onGoing) {
       setStep(3);
     }
-    if (past) {
+    if (past || meeting.status === "completed") {
       setStep(4);
     }
     setSelectedDate(meeting.startsAt.split("T")[0]);
@@ -884,6 +884,10 @@ export default function MeetingDetails() {
                 ? `${meeting.room.roomname} (Capacity: ${meeting.room.capacity})`
                 : "No room assigned"}
             </p>
+            <p style={{ fontSize: "1rem", color: "#444" }}>
+              Floor{" "}
+              {meeting.room ? `${meeting.room.floor}` : "No room assigned"}
+            </p>
           </div>
 
           {/* Agendas */}
@@ -959,37 +963,38 @@ export default function MeetingDetails() {
                       </p>
                     </div>
                   </div>
-                  {isUserOrganizer && (onGoing || past) && (
-                    <div>
-                      <form>
-                        <label style={switchStyle}>
-                          <input
-                            type="checkbox"
-                            checked={user.pivot.Attended}
-                            onChange={() => handleToggle(user.id)}
-                            style={{ display: "none" }}
-                          />
-                          <span
-                            style={{
-                              ...sliderStyle,
-                              backgroundColor: user.pivot.Attended
-                                ? "#0d6efd"
-                                : "#ccc",
-                            }}
-                          >
+                  {isUserOrganizer &&
+                    (onGoing || past || meeting.status === "completed") && (
+                      <div>
+                        <form>
+                          <label style={switchStyle}>
+                            <input
+                              type="checkbox"
+                              checked={user.pivot.Attended}
+                              onChange={() => handleToggle(user.id)}
+                              style={{ display: "none" }}
+                            />
                             <span
                               style={{
-                                ...dotStyle,
-                                transform: user.pivot.Attended
-                                  ? "translateX(22px)"
-                                  : "translateX(2px)",
+                                ...sliderStyle,
+                                backgroundColor: user.pivot.Attended
+                                  ? "#0d6efd"
+                                  : "#ccc",
                               }}
-                            />
-                          </span>
-                        </label>
-                      </form>
-                    </div>
-                  )}
+                            >
+                              <span
+                                style={{
+                                  ...dotStyle,
+                                  transform: user.pivot.Attended
+                                    ? "translateX(22px)"
+                                    : "translateX(2px)",
+                                }}
+                              />
+                            </span>
+                          </label>
+                        </form>
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
@@ -1002,7 +1007,7 @@ export default function MeetingDetails() {
         >
           {/* Minutes */}
           <div className="card shadow" style={cardStyle}>
-            {past && meeting.minutes && (
+            {(past || meeting.status === "completed") && meeting.minutes && (
               <div style={{ textAlign: "center" }}>
                 <button
                   className="btn btn-outline-danger"
@@ -1203,6 +1208,7 @@ export default function MeetingDetails() {
 
                   <input
                     type="date"
+                    min={today}
                     value={selectedDate || ""}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     style={{
@@ -1394,6 +1400,7 @@ export default function MeetingDetails() {
                       <input
                         id="start-time"
                         type="datetime-local"
+                        min = {toDatetimeLocal(new Date())}
                         value={toDatetimeLocal(newMeeting.startsAt)}
                         onChange={(e) => {
                           setNewMeeting({
@@ -1428,6 +1435,7 @@ export default function MeetingDetails() {
                       <input
                         id="end-time"
                         type="datetime-local"
+                        min = {toDatetimeLocal(new Date())}
                         value={toDatetimeLocal(newMeeting.endsAt)}
                         onChange={(e) =>
                           setNewMeeting({
@@ -1825,64 +1833,67 @@ export default function MeetingDetails() {
                       >
                         You
                       </div>
-                      {selectedUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          style={{
-                            backgroundColor: "#d6e4ff",
-                            padding: "0.4rem 1rem",
-                            borderRadius: "9999px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.6rem",
-                            fontSize: "1rem",
-                            color: "#1a3fbb",
-                            boxShadow: "0 1px 3px rgba(0, 49, 151, 0.3)",
-                            userSelect: "none",
-                          }}
-                          title={user.email}
-                        >
-                          <span>{user.name}</span>
-                          <button
-                            onClick={() => {
-                              setSelectedUsers((prev) =>
-                                prev.filter((u) => u.id !== user.id)
-                              );
-                              setNewMeeting((prev) => ({
-                                ...prev,
-                                attendees: prev.attendees.filter(
-                                  (id) => id !== user.id
-                                ),
-                              }));
-                            }}
+                      {selectedUsers
+                        .filter((u) => u.id !== userId)
+                        .map((user) => (
+                          <div
+                            key={user.id}
                             style={{
-                              background: "transparent",
-                              border: "none",
-                              color: "#0d47a1",
-                              fontWeight: "700",
-                              cursor: "pointer",
-                              fontSize: "1.3rem",
-                              lineHeight: "1",
-                              padding: 0,
-                              margin: 0,
-                              width: "24px",
-                              height: "24px",
+                              backgroundColor: "#d6e4ff",
+                              padding: "0.4rem 1rem",
+                              borderRadius: "9999px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.6rem",
+                              fontSize: "1rem",
+                              color: "#1a3fbb",
+                              boxShadow: "0 1px 3px rgba(0, 49, 151, 0.3)",
+                              userSelect: "none",
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = "white";
-                              e.currentTarget.style.backgroundColor = "#0d47a1";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = "#0d47a1";
-                              e.currentTarget.style.backgroundColor =
-                                "transparent";
-                            }}
-                            aria-label={`Remove ${user.name}`}
+                            title={user.email}
                           >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                            <span>{user.name}</span>
+                            <button
+                              onClick={() => {
+                                setSelectedUsers((prev) =>
+                                  prev.filter((u) => u.id !== user.id)
+                                );
+                                setNewMeeting((prev) => ({
+                                  ...prev,
+                                  attendees: prev.attendees.filter(
+                                    (id) => id !== user.id
+                                  ),
+                                }));
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#0d47a1",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                fontSize: "1.3rem",
+                                lineHeight: "1",
+                                padding: 0,
+                                margin: 0,
+                                width: "24px",
+                                height: "24px",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = "white";
+                                e.currentTarget.style.backgroundColor =
+                                  "#0d47a1";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = "#0d47a1";
+                                e.currentTarget.style.backgroundColor =
+                                  "transparent";
+                              }}
+                              aria-label={`Remove ${user.name}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                     </div>
                     <input
                       id="user-search"
@@ -2339,6 +2350,7 @@ export default function MeetingDetails() {
                               <label>Due Date</label>
                               <input
                                 type="date"
+                                min={today}
                                 value={actionItemData.dueDate}
                                 onChange={(e) =>
                                   setActionItemData({
@@ -2400,7 +2412,7 @@ export default function MeetingDetails() {
                       gap: "1rem",
                     }}
                   >
-                    {!past && (
+                    {!past && !meeting.status === "completed" && (
                       <button
                         type="button"
                         onClick={() => setStep(3)}

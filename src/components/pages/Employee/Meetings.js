@@ -969,7 +969,9 @@ export default function MeetingsList() {
                     color: "#0d6efd",
                   }}
                 >
-                  Create New Meeting
+                  {currentMeetingId
+                    ? "Edit Meeting Details"
+                    : "Create New Meeting"}
                 </h3>
 
                 {formError && (
@@ -1059,7 +1061,7 @@ export default function MeetingsList() {
 
                   <input
                     type="datetime-local"
-                    min = {today + "T00:00"}
+                    min={today + "T00:00"}
                     value={toDatetimeLocal(newMeeting.startsAt)}
                     ref={startsAtRef}
                     onChange={(e) => {
@@ -1090,7 +1092,7 @@ export default function MeetingsList() {
 
                   <input
                     type="datetime-local"
-                    min = {today + "T00:00"}
+                    min={today + "T00:00"}
                     value={toDatetimeLocal(newMeeting.endsAt)}
                     ref={endsAtRef}
                     onChange={(e) =>

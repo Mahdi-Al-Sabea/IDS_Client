@@ -25,9 +25,9 @@ const CreateRoom = ({ toggle, setToggle, floorPlanPosition , targetRef }) => {
 
   const fetchFeatures = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/Feature");
-      console.log("Features fetched:", response.data.data);
-      setFeatures(response.data.data.data);
+      const response = await axios.get("http://127.0.0.1:8000/api/FeatureNotPaginated");
+      console.log("Features fetched:", response.data);
+      setFeatures(response.data.data);
     } catch (error) {
       console.error("Error fetching features:", error);
       toast.error("Failed to load features");

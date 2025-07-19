@@ -24,9 +24,9 @@ const RoomsTable = ({toggle,setToggle}) => {
     const fetchFeatures = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://127.0.0.1:8000/api/Feature");
-        console.log("Features fetched:", response.data.data);
-      setFeatures(response.data.data.data);
+      const response = await axios.get("http://127.0.0.1:8000/api/FeatureNotPaginated");
+        console.log("Features fetched:", response.data);
+      setFeatures(response.data.data);
     } catch (error) {
       console.error("Error fetching features:", error);
       toast.error("Failed to load features");
@@ -60,6 +60,7 @@ const RoomsTable = ({toggle,setToggle}) => {
       toast.success("Room updated successfully!");
       setEditing(false);
       fetchRooms(); // refresh the main table
+      setToggle(!toggle);
       setShowModal(false);
     } catch (error) {
       if (error.response?.data?.message === "Validation Error") {
@@ -97,6 +98,7 @@ const RoomsTable = ({toggle,setToggle}) => {
         setRooms((prevRooms) => prevRooms.filter((r) => r.id !== id));
         //alert("Room deleted successfully!");
         toast.success("Room deleted successfully!");
+        setToggle(!toggle);
       }catch (error) {
         console.error("Error deleting room:", error);
         toast.error("Failed to delete room. Please try again later.");

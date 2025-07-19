@@ -2,9 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import {
-  FaUser,
   FaList,
-  FaEdit,
   FaPaperclip,
   FaCheckCircle,
   FaPlus,
@@ -33,7 +31,6 @@ export default function MeetingDetails() {
   const Navigate = useNavigate();
   const { id } = useParams();
   const meetingId = id;
-  console.log("Meeting ID from params:", meetingId);
   const [meeting, setMeeting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,13 +41,10 @@ export default function MeetingDetails() {
   const [selectedFeatures, setSelectedFeatures] = useState([]);
   const [filteredRooms, setFilteredRooms] = useState([]);
   const [showAddActionItemForm, setShowAddActionItemForm] = useState(false);
-  const [isOn, setIsOn] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const today = new Date().toISOString().split("T")[0]; // e.g., "2025-07-17"
-
-  const toggle = () => setIsOn(!isOn);
 
   const targetRef = useRef(null);
 
@@ -78,11 +72,8 @@ export default function MeetingDetails() {
   const [selectedUsers, setSelectedUsers] = useState([]); // to store selected attendees
   const [rooms, setRooms] = useState([]);
   const [formError, setFormError] = useState("");
-  const errorRef = React.useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchFeature, setSearchFeature] = useState("");
   const [meetingsByDate, setMeetingsByDate] = useState([]);
-  const [modalType, setModalType] = useState(null);
   const [features, setFeatures] = useState([]);
   const [onGoing, setOnGoing] = useState(false);
   const [past, setPast] = useState(false);
@@ -92,11 +83,13 @@ export default function MeetingDetails() {
     discussedPoints: "",
   });
   const [attachmentFile, setAttachmentFile] = useState(null);
+  var i = 0;
   const [actionItemData, setActionItemData] = useState({
     description: "",
     status: "Pending",
     dueDate: "",
-    assignedTo: "",
+    assignedTo: null,
+    id: i,
   });
   const [agendas, setAgendas] = useState([]);
   const [users, setUsers] = useState([]);
@@ -141,12 +134,7 @@ export default function MeetingDetails() {
   async function fetchData() {
     try {
       setLoading(true);
-      const profileRes = await axios.get(
-        "http://127.0.0.1:8000/api/User/Profile"
-      );
-      const id = profileRes.data.data.id;
-      console.log(id);
-      setUserId(id);
+      setUserId(user.id);
       const response = await axios.get(
         `http://127.0.0.1:8000/api/Meeting/${meetingId}`,
         {
@@ -262,8 +250,6 @@ export default function MeetingDetails() {
     fetchFeatures();
   }, []);
 
-  const closeModal = () => setModalType(null);
-
   const handleAgendaChange = (index, value) => {
     const updated = [...newMeeting.agendas];
     updated[index].description = value;
@@ -283,31 +269,6 @@ export default function MeetingDetails() {
     updated.splice(index, 1);
     setNewMeeting((nm) => ({ ...nm, agendas: updated }));
   };
-
-  async function handleUploadAttachment() {
-    if (!attachmentFiles.length || !meeting.minutes?.id) {
-      toast.error("No files selected");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      attachmentFiles.forEach((file) => formData.append("files[]", file));
-      formData.append("minutes_of_meeting_id", meeting.minutes.id);
-
-      await axios.post("http://127.0.0.1:8000/api/Attachment/bulk", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      toast.success("Attachments uploaded.");
-      window.location.reload();
-    } catch (err) {
-      toast.error("Failed to upload attachments.");
-    }
-  }
 
   async function handleAddActionItem() {
     console.log("clicked");
@@ -329,22 +290,20 @@ export default function MeetingDetails() {
         minutes_of_meeting_id: meeting.minutes.id,
       };
 
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/ActionItem",
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const newItem = response.data.data; // adjust if your API wraps it differently
-
       // ✅ Update state without reloading
       setMeeting((prev) => ({
         ...prev,
         minutes: {
           ...prev.minutes,
-          action_items: [...(prev.minutes?.action_items || []), newItem],
+          action_items: [...(prev.minutes?.action_items || []), actionItemData],
+        },
+      }));
+
+      setNewMeeting((prev) => ({
+        ...prev,
+        minutes: {
+          ...prev.minutes,
+          action_items: [...(prev.minutes?.action_items || []), actionItemData],
         },
       }));
 
@@ -352,26 +311,14 @@ export default function MeetingDetails() {
         description: "",
         status: "Pending",
         dueDate: "",
-        assignedTo: "",
-      }); // reset form
+        assignedTo: null,
+        id: i,
+      });
+      i++;
       toast.success("Action item added.");
     } catch (err) {
       toast.error("Failed to add action item.");
     }
-  }
-
-  function Modal({ children }) {
-    return (
-      <div className="modal-overlay" onClick={closeModal}>
-        <div
-          className="modal-content"
-          onClick={(e) => e.stopPropagation()} // Prevent overlay click close when clicking inside modal
-        >
-          {children}
-          <button onClick={closeModal}>Close</button>
-        </div>
-      </div>
-    );
   }
 
   async function handleDeleteAttachment(id) {
@@ -397,12 +344,17 @@ export default function MeetingDetails() {
 
   async function handleDeleteActionItem(id) {
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/ActionItem/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      // ✅ Update state instead of reloading
       setMeeting((prev) => ({
+        ...prev,
+        minutes: {
+          ...prev.minutes,
+          action_items: prev.minutes.action_items.filter(
+            (item) => item.id !== id
+          ),
+        },
+      }));
+
+      setNewMeeting((prev) => ({
         ...prev,
         minutes: {
           ...prev.minutes,
@@ -604,25 +556,26 @@ export default function MeetingDetails() {
         discussedPoints: newMeeting.minutes?.discussedPoints,
         decisions: newMeeting.minutes?.decisions,
 
-        action_items:
-          newMeeting.minutes?.action_items?.map((item) => ({
-            id: item.id,
-            description: item.description,
-            status: item.status,
-            assignee_id: item.assignee?.id, // backend will likely expect ID
-          })) || [],
-
-        attachments:
-          newMeeting.minutes?.attachments?.map((att) => ({
-            id: att.id,
-            fileName: att.fileName,
-            filePath: att.filePath,
-            uploader_id: att.uploader?.id, // same here
-          })) || [],
+        action_items: newMeeting.minutes?.action_items || [],
       },
     };
 
     console.log("Creating meeting with payload:", payload);
+
+    if (attachmentFiles.length !== 0) {
+      const formData = new FormData();
+      attachmentFiles.forEach((file) => formData.append("files[]", file));
+      formData.append("minutes_of_meeting_id", meeting.minutes.id);
+
+      await axios.post("http://127.0.0.1:8000/api/Attachment/bulk", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    }
+
+    setAttachmentFiles([]);
 
     try {
       await axios.put(
@@ -638,9 +591,16 @@ export default function MeetingDetails() {
         room_id: "",
         agendas: [{ description: "" }],
         attendees: [],
+        minutes: {
+          decisions: "",
+          discussedPoints: "",
+          attachments: [],
+          action_items: [],
+        },
       });
+      setShowAddActionItemForm(false);
       toast.success("Meeting Editted Successfully");
-      fetchData();
+      setTimeout(() => fetchData(), 1500);
     } catch (err) {
       console.log("Create meeting error", err);
       if (err.response && err.response.data) {
@@ -1124,7 +1084,11 @@ export default function MeetingDetails() {
                       fontSize: "0.9rem",
                     }}
                   >
-                    Assigned to: {item.assignee?.name || "Unassigned"} | Due:{" "}
+                    Assigned to:{" "}
+                    {users.find((u) => u.id == item.assignedTo)?.name ||
+                      users.find((u) => u.id == item.assignedTo)?.name ||
+                      "Unassigned"}{" "}
+                    | Due:{" "}
                     {item.dueDate
                       ? new Date(item.dueDate).toLocaleDateString()
                       : "No due date"}
@@ -1400,7 +1364,7 @@ export default function MeetingDetails() {
                       <input
                         id="start-time"
                         type="datetime-local"
-                        min = {toDatetimeLocal(new Date())}
+                        min={toDatetimeLocal(new Date())}
                         value={toDatetimeLocal(newMeeting.startsAt)}
                         onChange={(e) => {
                           setNewMeeting({
@@ -1435,7 +1399,7 @@ export default function MeetingDetails() {
                       <input
                         id="end-time"
                         type="datetime-local"
-                        min = {toDatetimeLocal(new Date())}
+                        min={toDatetimeLocal(new Date())}
                         value={toDatetimeLocal(newMeeting.endsAt)}
                         onChange={(e) =>
                           setNewMeeting({
@@ -2250,13 +2214,6 @@ export default function MeetingDetails() {
                         }}
                         style={{ marginBottom: "0.5rem", marginTop: "0.5rem" }}
                       />
-
-                      <button
-                        onClick={handleUploadAttachment}
-                        style={primaryBtn}
-                      >
-                        <FaPaperclip /> Upload
-                      </button>
                     </div>
                   </section>
 
@@ -2369,14 +2326,14 @@ export default function MeetingDetails() {
                                 onChange={(e) =>
                                   setActionItemData({
                                     ...actionItemData,
-                                    assignedTo: e.target.value,
+                                    assignedTo: parseInt(e.target.value),
                                   })
                                 }
                                 style={inputStyle}
                               >
                                 <option value="">Select Assignee</option>
                                 {users
-                                  .filter((u) => u.role !== "Guest")
+                                  .filter((u) => u.role !== "Guest" && u.role !== "Admin")
                                   .map((user) => (
                                     <option key={user.id} value={user.id}>
                                       {user.name}

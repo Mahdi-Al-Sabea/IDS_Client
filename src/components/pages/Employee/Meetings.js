@@ -50,9 +50,8 @@ export default function MeetingsList() {
   const [rooms, setRooms] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]); // Store selected users
-  const [userId, setUserId] = useState(null); // Store user ID
+  const [userId, setUserId] = useState(user.id); // Store user ID
   const [currentMeetingId, setCurrentMeetingId] = useState(null); // null means it's a new meeting
-  const [searchFeature, setSearchFeature] = useState("");
   const [meetingsByDate, setMeetingsByDate] = useState([]);
   const [step, setStep] = useState(1); // step 1 = date picker, step 2 = form
   const [selectedDate, setSelectedDate] = useState(null);
@@ -83,7 +82,6 @@ export default function MeetingsList() {
   const startsAtRef = React.useRef(null);
   const endsAtRef = React.useRef(null);
   const roomRef = React.useRef(null);
-  // Add more if needed (agendas, attendees...)
 
   const validateForm = () => {
     const newErrors = {};
@@ -171,14 +169,8 @@ export default function MeetingsList() {
     setError(null);
     try {
       setLoading(true);
-      const profileRes = await axios.get(
-        "http://127.0.0.1:8000/api/User/Profile"
-      );
-      const id = profileRes.data.data.id;
-      console.log(id);
-      setUserId(id);
       const res = await axios.get(
-        `http://127.0.0.1:8000/api/User/${id}/meetings`,
+        `http://127.0.0.1:8000/api/User/${userId}/meetings`,
         config
       );
       setMeetings(res.data.data);
